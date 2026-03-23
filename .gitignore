@@ -15,3 +15,6 @@ next-env.d.ts
 .turbo/
 coverage/
 .vercel
+
+# clerk configuration (can include secrets)
+/.clerk/

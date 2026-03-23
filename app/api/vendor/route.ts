@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
   const { userId } = await auth();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const parsed = schema.safeParse(await req.json());
-  if (!parsed.success) return NextResponse.json({ error: parsed.error.errors }, { status: 400 });
+  if (!parsed.success) return NextResponse.json({ error: parsed.error.issues }, { status: 400 });
   const db = getDb();
   const [existing] = await db.select().from(vendors).where(eq(vendors.slug, parsed.data.slug));
   if (existing) return NextResponse.json({ error: "Slug already taken" }, { status: 409 });
