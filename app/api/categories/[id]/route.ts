@@ -17,7 +17,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { id } = await params;
   const parsed = schema.safeParse(await req.json());
-  if (!parsed.success) return NextResponse.json({ error: parsed.error.errors }, { status: 400 });
+  if (!parsed.success) return NextResponse.json({ error: parsed.error.issues }, { status: 400 });
   const vendorId = await getVendorId(userId);
   if (!vendorId) return NextResponse.json({ error: "Vendor not found" }, { status: 404 });
   const db = getDb();

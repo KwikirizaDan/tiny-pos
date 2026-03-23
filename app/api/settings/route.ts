@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const body = await req.json();
   const parsed = schema.safeParse(body);
-  if (!parsed.success) return NextResponse.json({ error: parsed.error.errors }, { status: 400 });
+  if (!parsed.success) return NextResponse.json({ error: parsed.error.issues }, { status: 400 });
   const vendorId = await getVendorId(userId);
   if (!vendorId) return NextResponse.json({ error: "Vendor not found" }, { status: 404 });
   const db = getDb();
