@@ -14,6 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ProductDialog } from "./product-dialog";
 import { formatCurrency } from "@/lib/utils";
 import type { Product, Category } from "@/db/schema";
+import { deleteProduct } from "@/app/(dashboard)/products/actions";
 
 const col = createColumnHelper<Product>();
 
@@ -33,11 +34,11 @@ export function ProductsClient({
   const [editProduct, setEditProduct] = useState<Product | null>(null);
 
   const handleDelete = async (id: string) => {
-    const res = await fetch(`/api/products/${id}`, { method: "DELETE" });
-    if (res.ok) {
+    try {
+      await deleteProduct(id);
       setProducts((p) => p.filter((x) => x.id !== id));
       toast.success("Product deleted");
-    } else {
+    } catch (err) {
       toast.error("Failed to delete product");
     }
   };

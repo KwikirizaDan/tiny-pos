@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { Product, Category } from "@/db/schema";
+import { createProduct, updateProduct } from "@/app/(dashboard)/products/actions";
 
 interface ProductDialogProps {
   open: boolean;
@@ -61,24 +62,11 @@ export function ProductDialog({ open, onOpenChange, product, categories, vendorI
         costPrice: form.costPrice || undefined,
       };
 
-      const res = product
-        ? await fetch(`/api/products/${product.id}`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-          })
-        : await fetch("/api/products", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-          });
+      const saved = product
+        ? await updateProduct(product.id, payload)
+        : await createProduct(payload);
 
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(typeof err.error === "string" ? err.error : "Failed");
-      }
-      const saved = await res.json();
-      onSave(saved);
+      onSave(saved as Product);
       toast.success(product ? "Product updated" : "Product created");
       onOpenChange(false);
     } catch (e: any) {
