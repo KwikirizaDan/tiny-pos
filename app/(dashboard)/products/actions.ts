@@ -32,7 +32,7 @@ export async function createProduct(data: z.infer<typeof productSchema>) {
     .returning();
 
   revalidatePath("/products");
-  return product;
+  return JSON.parse(JSON.stringify(product));
 }
 
 export async function updateProduct(id: string, data: Partial<z.infer<typeof productSchema>>) {
@@ -51,7 +51,7 @@ export async function updateProduct(id: string, data: Partial<z.infer<typeof pro
   if (!product) throw new Error("Product not found");
 
   revalidatePath("/products");
-  return product;
+  return JSON.parse(JSON.stringify(product));
 }
 
 export async function deleteProduct(id: string) {
