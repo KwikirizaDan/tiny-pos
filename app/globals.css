@@ -80,28 +80,6 @@
   * { @apply border-border; }
   body { @apply bg-background text-foreground font-mono antialiased; }
 
-  /* Scoped Clerk Auth Overrides */
-  .auth-clerk-container {
-    & .cl-footer, & .cl-internal-b389ae, & .cl-internal-1809asf, & .cl-header, & .cl-headerTitle, & .cl-headerSubtitle {
-      display: none !important;
-    }
-    & .cl-card, & .cl-rootBox, & .cl-cardBox, & .cl-main {
-      background-color: transparent !important;
-      box-shadow: none !important;
-      border: none !important;
-      width: 100% !important;
-      margin: 0 !important;
-      padding: 0 !important;
-    }
-    & .cl-formFieldInput, & .cl-socialButtonsBlockButton {
-      background-color: hsl(var(--background)) !important;
-      color: hsl(var(--foreground)) !important;
-      border-color: hsl(var(--border)) !important;
-    }
-    & .cl-formFieldLabel, & .cl-socialButtonsBlockButtonText, & .cl-dividerText {
-      color: hsl(var(--foreground)) !important;
-    }
-  }
 }
 
 @keyframes preloader {
