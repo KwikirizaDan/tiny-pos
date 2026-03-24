@@ -7,13 +7,19 @@ export const metadata: Metadata = {
   title: "TinyPOS",
   description: "Uganda's simplest point of sale by Binary Labs",
   manifest: "/manifest.json",
-  themeColor: "#7c3aed",
-  viewport: "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
     title: "TinyPOS",
   },
+};
+
+export const viewport = {
+  themeColor: "#7c3aed",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 export default function RootLayout({

@@ -59,12 +59,14 @@ export function ProductDialog({ open, onOpenChange, product, categories, vendorI
         stockQuantity: Number(form.stockQuantity),
         lowStockAlert: Number(form.lowStockAlert),
         categoryId: form.categoryId || null,
-        costPrice: form.costPrice || undefined,
+        costPrice: form.costPrice === "" ? null : form.costPrice,
+        description: form.description || null,
+        sku: form.sku || null,
       };
 
       const saved = product
         ? await updateProduct(product.id, payload)
-        : await createProduct(payload);
+        : await createProduct(payload as any);
 
       onSave(saved as Product);
       toast.success(product ? "Product updated" : "Product created");
