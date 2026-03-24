@@ -1,43 +1,33 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { getVendorId } from "@/lib/vendor";
-import { SignIn } from "@clerk/nextjs";
+import { LoginForm } from "@/components/auth/login-form";
 import { Logo } from "@/components/ui/logo";
+import Link from "next/link";
 
 export default async function HomePage() {
   const { userId } = await auth();
 
   if (!userId) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="flex flex-col items-center gap-6">
-          <div className="flex items-center gap-3">
-            <Logo width={40} height={40} />
-            <div>
-              <div className="text-foreground font-mono text-lg font-bold">
-                Tiny<span className="text-primary">POS</span>
+      <div className="flex min-h-svh w-full items-center justify-center p-6 md:p-10">
+        <div className="w-full max-w-sm flex flex-col gap-6">
+          <div className="flex flex-col items-center gap-2">
+            <Link href="/" className="flex flex-col items-center gap-2 font-medium">
+              <div className="flex h-10 w-10 items-center justify-center rounded-none bg-primary text-primary-foreground">
+                <Logo width={24} height={24} className="brightness-0 invert" />
               </div>
-              <div className="text-muted-foreground font-mono text-[10px] tracking-widest">
-                by Binary Labs
-              </div>
-            </div>
+              <span className="sr-only">TinyPOS</span>
+            </Link>
+            <h1 className="text-xl font-bold font-mono">Tiny<span className="text-primary">POS</span></h1>
           </div>
-          <SignIn
-            appearance={{
-              elements: {
-                rootBox: "shadow-none",
-                card: "bg-card border border-border shadow-none rounded-none",
-                headerTitle: "text-card-foreground font-mono",
-                headerSubtitle: "text-muted-foreground",
-                formFieldInput:
-                  "bg-background border-border text-foreground rounded-none focus:border-primary",
-                formButtonPrimary:
-                  "bg-primary hover:bg-primary/90 text-primary-foreground rounded-none font-mono",
-                footerAction: "hidden",
-                footerPages: "hidden",
-              },
-            }}
-          />
+          <LoginForm />
+          <div className="text-center text-sm text-muted-foreground">
+            Don&apos;t have an account?{" "}
+            <Link href="/sign-up" className="underline underline-offset-4 hover:text-primary">
+              Sign up
+            </Link>
+          </div>
         </div>
       </div>
     );
