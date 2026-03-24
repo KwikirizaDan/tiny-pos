@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatDate } from "@/lib/utils";
 import type { InventoryLog, Product } from "@/db/schema";
+import { createInventoryLog } from "@/app/(dashboard)/inventory/actions";
 
 const changeTypeVariant: Record<string, "success" | "destructive" | "secondary" | "warning"> = {
   restock: "success", sale: "secondary", refund: "warning", adjustment: "secondary", damage: "destructive",
@@ -28,15 +29,20 @@ export function InventoryClient({ logs: init, products }: { logs: InventoryLog[]
     e.preventDefault();
     setLoading(true);
     try {
-      const res = await fetch("/api/inventory", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...form, quantityChange: Number(form.quantityChange) }) });
-      if (!res.ok) { const err = await res.json(); throw new Error(err.error ?? "Failed"); }
-      const saved = await res.json();
-      setLogs((p) => [saved, ...p]);
+      const saved = await createInventoryLog({
+        ...form,
+        quantityChange: Number(form.quantityChange),
+        changeType: form.changeType as any,
+      });
+      setLogs((p) => [saved as InventoryLog, ...p]);
       toast.success("Stock adjusted");
       setDialogOpen(false);
       setForm({ productId: "", changeType: "restock", quantityChange: "", notes: "" });
-    } catch (e: any) { toast.error(e.message ?? "Something went wrong"); }
-    finally { setLoading(false); }
+    } catch (e: any) {
+      toast.error(e.message ?? "Something went wrong");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

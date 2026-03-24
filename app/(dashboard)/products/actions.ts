@@ -8,13 +8,13 @@ import { z } from "zod";
 
 const productSchema = z.object({
   name: z.string().min(1, "Name is required"),
-  description: z.string().optional(),
+  description: z.string().optional().nullable(),
   price: z.string().min(1, "Price is required"),
-  costPrice: z.string().optional(),
+  costPrice: z.string().optional().nullable(),
   stockQuantity: z.number().int().min(0),
-  lowStockAlert: z.number().int().min(0).optional(),
+  lowStockAlert: z.number().int().min(0).optional().nullable(),
   categoryId: z.string().uuid().optional().nullable(),
-  sku: z.string().optional(),
+  sku: z.string().optional().nullable(),
   isActive: z.boolean().optional(),
 });
 
@@ -32,6 +32,7 @@ export async function createProduct(data: z.infer<typeof productSchema>) {
     .returning();
 
   revalidatePath("/products");
+  revalidatePath("/pos");
   return product;
 }
 
@@ -51,6 +52,7 @@ export async function updateProduct(id: string, data: Partial<z.infer<typeof pro
   if (!product) throw new Error("Product not found");
 
   revalidatePath("/products");
+  revalidatePath("/pos");
   return product;
 }
 
@@ -63,5 +65,6 @@ export async function deleteProduct(id: string) {
     .where(and(eq(products.id, id), eq(products.vendorId, vendor.id)));
 
   revalidatePath("/products");
+  revalidatePath("/pos");
   return { success: true };
 }

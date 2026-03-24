@@ -81,3 +81,13 @@
   * { @apply border-border; }
   body { @apply bg-background text-foreground font-mono antialiased; }
 }
+
+@keyframes preloader {
+  0% { transform: scaleX(0); }
+  50% { transform: scaleX(0.7); }
+  100% { transform: scaleX(1); }
+}
+
+.animate-preloader {
+  animation: preloader 1s infinite linear;
+}

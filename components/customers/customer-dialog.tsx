@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import type { Customer } from "@/db/schema";
+import { createCustomer, updateCustomer } from "@/app/(dashboard)/customers/actions";
 
 interface Props {
   open: boolean;
@@ -27,16 +28,17 @@ export function CustomerDialog({ open, onOpenChange, customer, onSave }: Props) 
     e.preventDefault();
     setLoading(true);
     try {
-      const res = customer
-        ? await fetch(`/api/customers/${customer.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) })
-        : await fetch("/api/customers", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) });
-      if (!res.ok) { const err = await res.json(); throw new Error(err.error ?? "Failed"); }
-      const saved = await res.json();
-      onSave(saved);
+      const saved = customer
+        ? await updateCustomer(customer.id, form)
+        : await createCustomer(form);
+      onSave(saved as Customer);
       toast.success(customer ? "Customer updated" : "Customer added");
       onOpenChange(false);
-    } catch (e: any) { toast.error(e.message ?? "Something went wrong"); }
-    finally { setLoading(false); }
+    } catch (e: any) {
+      toast.error(e.message ?? "Something went wrong");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

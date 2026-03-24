@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { Discount } from "@/db/schema";
+import { createDiscount, updateDiscount } from "@/app/(dashboard)/discounts/actions";
 
 interface Props {
   open: boolean;
@@ -39,17 +40,24 @@ export function DiscountDialog({ open, onOpenChange, discount, onSave }: Props) 
     e.preventDefault();
     setLoading(true);
     try {
-      const payload = { ...form, maxUses: form.maxUses ? Number(form.maxUses) : null, expiresAt: form.expiresAt || null, minOrderAmount: form.minOrderAmount || undefined };
-      const res = discount
-        ? await fetch(`/api/discounts/${discount.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) })
-        : await fetch("/api/discounts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
-      if (!res.ok) { const err = await res.json(); throw new Error(err.error ?? "Failed"); }
-      const saved = await res.json();
-      onSave(saved);
+      const payload = {
+        ...form,
+        maxUses: form.maxUses ? Number(form.maxUses) : null,
+        expiresAt: form.expiresAt || null,
+        minOrderAmount: form.minOrderAmount || undefined,
+        discountType: form.discountType as any,
+      };
+      const saved = discount
+        ? await updateDiscount(discount.id, payload)
+        : await createDiscount(payload);
+      onSave(saved as Discount);
       toast.success(discount ? "Discount updated" : "Discount created");
       onOpenChange(false);
-    } catch (e: any) { toast.error(e.message ?? "Something went wrong"); }
-    finally { setLoading(false); }
+    } catch (e: any) {
+      toast.error(e.message ?? "Something went wrong");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
