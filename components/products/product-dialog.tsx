@@ -27,7 +27,7 @@ export function ProductDialog({ open, onOpenChange, product, categories, vendorI
     costPrice: "",
     stockQuantity: "0",
     lowStockAlert: "5",
-    categoryId: "",
+    categoryId: "none",
     sku: "",
     isActive: true,
   });
@@ -41,12 +41,12 @@ export function ProductDialog({ open, onOpenChange, product, categories, vendorI
         costPrice: product.costPrice ?? "",
         stockQuantity: String(product.stockQuantity ?? 0),
         lowStockAlert: String(product.lowStockAlert ?? 5),
-        categoryId: product.categoryId ?? "",
+        categoryId: product.categoryId ?? "none",
         sku: product.sku ?? "",
         isActive: product.isActive ?? true,
       });
     } else {
-      setForm({ name: "", description: "", price: "", costPrice: "", stockQuantity: "0", lowStockAlert: "5", categoryId: "", sku: "", isActive: true });
+      setForm({ name: "", description: "", price: "", costPrice: "", stockQuantity: "0", lowStockAlert: "5", categoryId: "none", sku: "", isActive: true });
     }
   }, [product, open]);
 
@@ -58,7 +58,7 @@ export function ProductDialog({ open, onOpenChange, product, categories, vendorI
         ...form,
         stockQuantity: Number(form.stockQuantity),
         lowStockAlert: Number(form.lowStockAlert),
-        categoryId: form.categoryId || null,
+        categoryId: form.categoryId === "none" ? null : form.categoryId,
         costPrice: form.costPrice === "" ? null : form.costPrice,
         description: form.description || null,
         sku: form.sku || null,
@@ -127,7 +127,7 @@ export function ProductDialog({ open, onOpenChange, product, categories, vendorI
                   <SelectValue placeholder="Select category" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">No category</SelectItem>
+                  <SelectItem value="none">No category</SelectItem>
                   {categories.map((c) => (
                     <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                   ))}
