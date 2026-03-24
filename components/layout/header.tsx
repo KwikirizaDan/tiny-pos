@@ -2,6 +2,7 @@
 import { UserButton } from "@clerk/nextjs";
 import { Moon, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
+import { userButtonAppearance } from "@/lib/clerk";
 
 export function Header() {
   const [dark, setDark] = useState(false);
@@ -32,15 +33,7 @@ export function Header() {
         >
           {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
         </button>
-        <UserButton
-          appearance={{
-            elements: {
-              avatarBox: "w-8 h-8",
-              userButtonPopoverCard: "rounded-none border border-border shadow-md",
-              userButtonPopoverActionButton: "font-mono text-sm rounded-none hover:bg-accent",
-            },
-          }}
-        />
+        <UserButton appearance={userButtonAppearance} />
       </div>
     </header>
   );

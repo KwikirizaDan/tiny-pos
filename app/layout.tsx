@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
 import { Toaster } from "sonner";
 import "./globals.css";
+import { clerkLocalization } from "@/lib/clerk";
 
 export const metadata: Metadata = {
   title: "TinyPOS",
@@ -34,7 +35,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body suppressHydrationWarning>
-        <ClerkProvider>
+        <ClerkProvider localization={clerkLocalization}>
           <script
             dangerouslySetInnerHTML={{
               __html: `
