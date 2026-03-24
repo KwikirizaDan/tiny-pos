@@ -194,11 +194,13 @@ ${Number(sale.taxAmount) > 0 ? `<div class="row"><span>Tax</span><span>${formatU
 
       setLastSale(offlineSale as Sale);
       setLastCartItems([...cart]);
+      const currentCart = [...cart];
       setCart([]);
       setCartOpen(false);
       setSaleComplete(true);
       toast.success("Sale complete (Saved locally)");
       setLoading(false);
+      printReceipt(offlineSale as Sale, currentCart);
       return;
     }
 
@@ -207,10 +209,12 @@ ${Number(sale.taxAmount) > 0 ? `<div class="row"><span>Tax</span><span>${formatU
 
       setLastSale(sale as Sale);
       setLastCartItems([...cart]);
+      const currentCart = [...cart];
       setCart([]);
       setCartOpen(false);
       setSaleComplete(true);
       toast.success("Sale complete!");
+      printReceipt(sale as Sale, currentCart);
     } catch (e: any) {
       toast.error(e.message ?? "Checkout failed");
     } finally {
