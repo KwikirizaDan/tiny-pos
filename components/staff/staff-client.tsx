@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { StaffDialog } from "./staff-dialog";
 import { formatDate } from "@/lib/utils";
 import type { User } from "@/db/schema";
+import { deleteStaff, updateStaff } from "@/app/(dashboard)/staff/actions";
 
 const roleIcon = { owner: ShieldAlert, manager: ShieldCheck, cashier: Shield };
 const roleColor = { owner: "text-orange-500", manager: "text-violet-400", cashier: "text-zinc-400" };
@@ -17,17 +18,22 @@ export function StaffClient({ staff: init }: { staff: User[] }) {
   const [editStaff, setEditStaff] = useState<User | null>(null);
 
   const handleDelete = async (id: string) => {
-    const res = await fetch(`/api/staff/${id}`, { method: "DELETE" });
-    if (res.ok) { setStaff((p) => p.filter((s) => s.id !== id)); toast.success("Staff member removed"); }
-    else toast.error("Failed to remove");
+    try {
+      await deleteStaff(id);
+      setStaff((p) => p.filter((s) => s.id !== id));
+      toast.success("Staff member removed");
+    } catch (e: any) {
+      toast.error(e.message ?? "Failed to remove");
+    }
   };
 
   const handleToggle = async (member: User) => {
-    const res = await fetch(`/api/staff/${member.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ isActive: !member.isActive }) });
-    if (res.ok) {
-      const updated = await res.json();
+    try {
+      const updated = await updateStaff(member.id, { isActive: !member.isActive });
       setStaff((p) => p.map((s) => s.id === updated.id ? updated : s));
       toast.success(`${updated.name} ${updated.isActive ? "activated" : "deactivated"}`);
+    } catch (e: any) {
+      toast.error(e.message ?? "Failed to update status");
     }
   };
 

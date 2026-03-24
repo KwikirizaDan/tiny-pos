@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { toast } from "sonner";
 import { Logo } from "@/components/ui/logo";
+import { createVendor } from "@/app/(onboarding)/onboarding/actions";
 
 export function OnboardingClient() {
   const { user } = useUser();
@@ -19,19 +20,14 @@ export function OnboardingClient() {
     e.preventDefault();
     setLoading(true);
     try {
-      const vendorRes = await fetch("/api/vendor", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) });
-      const vendorText = await vendorRes.text();
-      if (!vendorRes.ok) {
-        let msg = "Failed to create store";
-        try { const p = JSON.parse(vendorText); msg = Array.isArray(p?.error) ? p.error.map((e: any) => e.message).join(", ") : (p?.error ?? msg); } catch {}
-        throw new Error(msg);
-      }
-      const vendor = JSON.parse(vendorText);
-      await fetch("/api/vendor/user", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ vendorId: vendor.id, email: user?.primaryEmailAddress?.emailAddress, name: user?.fullName ?? "" }) });
+      await createVendor(form);
       toast.success("Store created! Welcome to TinyPOS.");
       router.push("/dashboard");
-    } catch (err: any) { toast.error(err.message ?? "Something went wrong"); }
-    finally { setLoading(false); }
+    } catch (err: any) {
+      toast.error(err.message ?? "Something went wrong");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

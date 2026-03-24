@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { CustomerDialog } from "./customer-dialog";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import type { Customer } from "@/db/schema";
+import { deleteCustomer } from "@/app/(dashboard)/customers/actions";
 
 const col = createColumnHelper<Customer>();
 
@@ -20,9 +21,13 @@ export function CustomersClient({ customers: init }: { customers: Customer[] }) 
   const [editCustomer, setEditCustomer] = useState<Customer | null>(null);
 
   const handleDelete = async (id: string) => {
-    const res = await fetch(`/api/customers/${id}`, { method: "DELETE" });
-    if (res.ok) { setCustomers((p) => p.filter((c) => c.id !== id)); toast.success("Customer deleted"); }
-    else toast.error("Failed to delete");
+    try {
+      await deleteCustomer(id);
+      setCustomers((p) => p.filter((c) => c.id !== id));
+      toast.success("Customer deleted");
+    } catch (e: any) {
+      toast.error(e.message ?? "Failed to delete");
+    }
   };
 
   const handleSave = (customer: Customer) => {

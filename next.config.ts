@@ -1,4 +1,12 @@
 import type { NextConfig } from "next";
+import withPWAInit from "next-pwa";
+
+const withPWA = withPWAInit({
+  dest: "public",
+  disable: process.env.NODE_ENV === "development",
+  register: true,
+  skipWaiting: true,
+});
 
 const nextConfig: NextConfig = {
   images: {
@@ -7,6 +15,9 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "images.unsplash.com" },
     ],
   },
+  webpack: (config) => {
+    return config;
+  },
 };
 
-export default nextConfig;
+export default withPWA(nextConfig);

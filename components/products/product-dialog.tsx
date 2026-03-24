@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { Product, Category } from "@/db/schema";
+import { createProduct, updateProduct } from "@/app/(dashboard)/products/actions";
 
 interface ProductDialogProps {
   open: boolean;
@@ -54,30 +55,21 @@ export function ProductDialog({ open, onOpenChange, product, categories, vendorI
     setLoading(true);
     try {
       const payload = {
-        ...form,
+        name: form.name,
+        description: form.description || undefined,
+        price: form.price,
+        costPrice: form.costPrice || undefined,
         stockQuantity: Number(form.stockQuantity),
         lowStockAlert: Number(form.lowStockAlert),
-        categoryId: form.categoryId || null,
-        costPrice: form.costPrice || undefined,
+        categoryId: (form.categoryId as string) || null,
+        sku: form.sku || undefined,
+        isActive: form.isActive,
       };
 
-      const res = product
-        ? await fetch(`/api/products/${product.id}`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-          })
-        : await fetch("/api/products", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-          });
+      const saved = product
+        ? await updateProduct(product.id, payload)
+        : await createProduct(payload);
 
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(typeof err.error === "string" ? err.error : "Failed");
-      }
-      const saved = await res.json();
       onSave(saved);
       toast.success(product ? "Product updated" : "Product created");
       onOpenChange(false);
@@ -137,7 +129,7 @@ export function ProductDialog({ open, onOpenChange, product, categories, vendorI
                   <SelectValue placeholder="Select category" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">No category</SelectItem>
+                  <SelectItem value="null">No category</SelectItem>
                   {categories.map((c) => (
                     <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                   ))}

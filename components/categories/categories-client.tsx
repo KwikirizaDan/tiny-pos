@@ -5,6 +5,7 @@ import { Plus, Pencil, Trash2, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CategoryDialog } from "./category-dialog";
 import type { Category } from "@/db/schema";
+import { deleteCategory } from "@/app/(dashboard)/categories/actions";
 
 const PRESET_COLORS = ["#7c3aed","#ea6c10","#16a34a","#dc2626","#2563eb","#db2777","#d97706","#0891b2"];
 
@@ -14,9 +15,13 @@ export function CategoriesClient({ categories: init, productCounts }: { categori
   const [editCategory, setEditCategory] = useState<Category | null>(null);
 
   const handleDelete = async (id: string) => {
-    const res = await fetch(`/api/categories/${id}`, { method: "DELETE" });
-    if (res.ok) { setCategories(p => p.filter(c => c.id !== id)); toast.success("Category deleted"); }
-    else toast.error("Failed to delete");
+    try {
+      await deleteCategory(id);
+      setCategories(p => p.filter(c => c.id !== id));
+      toast.success("Category deleted");
+    } catch (e: any) {
+      toast.error(e.message ?? "Failed to delete");
+    }
   };
 
   const handleSave = (cat: Category) => {

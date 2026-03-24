@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { User } from "@/db/schema";
+import { createStaff, updateStaff } from "@/app/(dashboard)/staff/actions";
 
 interface Props {
   open: boolean;
@@ -28,11 +29,10 @@ export function StaffDialog({ open, onOpenChange, member, onSave }: Props) {
     e.preventDefault();
     setLoading(true);
     try {
-      const res = member
-        ? await fetch(`/api/staff/${member.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: form.name, role: form.role }) })
-        : await fetch("/api/staff", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) });
-      if (!res.ok) { const err = await res.json(); throw new Error(err.error ?? "Failed"); }
-      const saved = await res.json();
+      const saved = member
+        ? await updateStaff(member.id, { name: form.name, role: form.role as any })
+        : await createStaff(form as any);
+
       onSave(saved);
       toast.success(member ? "Staff updated" : "Staff member added");
       onOpenChange(false);

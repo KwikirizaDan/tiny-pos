@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/lib/utils";
 import type { Product, Category, Vendor, Sale } from "@/db/schema";
+import { createOrder } from "@/app/(dashboard)/pos/actions";
 
 interface CartItem { product: Product; quantity: number; }
 const TAX_RATE = 0.0;
@@ -25,7 +26,7 @@ interface POSTerminalProps {
 export function POSTerminal({ products, categories, vendor, cashierId, receiptFooter }: POSTerminalProps) {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [search, setSearch] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState<"cash" | "card">("cash");
+  const [paymentMethod, setPaymentMethod] = useState<string>("cash");
   const [loading, setLoading] = useState(false);
   const [saleComplete, setSaleComplete] = useState(false);
   const [lastSale, setLastSale] = useState<Sale | null>(null);
@@ -117,31 +118,21 @@ ${tax > 0 ? `<div class="row"><span>Tax</span><span>${formatUGX(tax)}</span></di
     if (!cart.length) { toast.warning("Cart is empty"); return; }
     setLoading(true);
     try {
-      const res = await fetch("/api/orders", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          vendorId: vendor.id,
-          cashierId,
-          items: cart.map((i) => ({
-            productId: i.product.id,
-            productName: i.product.name,
-            quantity: i.quantity,
-            unitPrice: i.product.price,
-          })),
-          subtotal: subtotal.toFixed(2),
-          tax: tax.toFixed(2),
-          discountAmount: "0",
-          totalAmount: total.toFixed(2),
-          paymentMethod,
-        }),
-      });
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error ?? "Checkout failed");
-      }
-      const sale = await res.json();
-      setLastSale(sale);
+      const payload = {
+        subtotal: subtotal.toFixed(2),
+        totalAmount: total.toFixed(2),
+        paymentMethod,
+        items: cart.map((i) => ({
+          productId: i.product.id,
+          productName: i.product.name,
+          quantity: i.quantity,
+          unitPrice: i.product.price,
+          subtotal: (Number(i.product.price) * i.quantity).toFixed(2),
+        })),
+      };
+
+      const order = await createOrder(payload);
+      setLastSale(order);
       setLastCartItems([...cart]);
       setCart([]);
       setCartOpen(false);
@@ -249,8 +240,8 @@ ${tax > 0 ? `<div class="row"><span>Tax</span><span>${formatUGX(tax)}</span></di
               </button>
             </div>
             <CartContents cart={cart} updateQty={updateQty} removeFromCart={removeFromCart}
-              subtotal={subtotal} tax={tax} total={total} paymentMethod={paymentMethod}
-              setPaymentMethod={setPaymentMethod} onCheckout={handleCheckout}
+              subtotal={subtotal} tax={tax} total={total} paymentMethod={paymentMethod as any}
+              setPaymentMethod={setPaymentMethod as any} onCheckout={handleCheckout}
               onClear={() => setCart([])} loading={loading} saleComplete={saleComplete}
               lastSale={lastSale} lastCartItems={lastCartItems}
               onPrint={() => lastSale && printReceipt(lastSale, lastCartItems)} />
@@ -266,8 +257,8 @@ ${tax > 0 ? `<div class="row"><span>Tax</span><span>${formatUGX(tax)}</span></di
           {itemCount > 0 && <Badge variant="secondary" className="ml-auto">{itemCount} items</Badge>}
         </div>
         <CartContents cart={cart} updateQty={updateQty} removeFromCart={removeFromCart}
-          subtotal={subtotal} tax={tax} total={total} paymentMethod={paymentMethod}
-          setPaymentMethod={setPaymentMethod} onCheckout={handleCheckout}
+          subtotal={subtotal} tax={tax} total={total} paymentMethod={paymentMethod as any}
+          setPaymentMethod={setPaymentMethod as any} onCheckout={handleCheckout}
           onClear={() => setCart([])} loading={loading} saleComplete={saleComplete}
           lastSale={lastSale} lastCartItems={lastCartItems}
           onPrint={() => lastSale && printReceipt(lastSale, lastCartItems)} />

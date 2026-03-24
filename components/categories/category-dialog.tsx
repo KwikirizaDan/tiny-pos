@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import type { Category } from "@/db/schema";
+import { createCategory, updateCategory } from "@/app/(dashboard)/categories/actions";
 
 interface Props { open: boolean; onOpenChange: (o: boolean) => void; category: Category | null; onSave: (c: Category) => void; presetColors: string[]; }
 
@@ -21,11 +22,11 @@ export function CategoryDialog({ open, onOpenChange, category, onSave, presetCol
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault(); setLoading(true);
     try {
-      const res = category
-        ? await fetch(`/api/categories/${category.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) })
-        : await fetch("/api/categories", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) });
-      if (!res.ok) { const err = await res.json(); throw new Error(err.error ?? "Failed"); }
-      onSave(await res.json()); toast.success(category ? "Category updated" : "Category created"); onOpenChange(false);
+      const saved = category
+        ? await updateCategory(category.id, form)
+        : await createCategory(form);
+
+      onSave(saved); toast.success(category ? "Category updated" : "Category created"); onOpenChange(false);
     } catch (e: any) { toast.error(e.message ?? "Something went wrong"); }
     finally { setLoading(false); }
   };
