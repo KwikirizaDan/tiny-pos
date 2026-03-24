@@ -1,15 +1,27 @@
-import { SignUp } from "@clerk/nextjs";
+import { SignUpForm } from "@/components/auth/signup-form";
 import { Logo } from "@/components/ui/logo";
+import Link from "next/link";
 
 export default function SignUpPage() {
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center">
-      <div className="flex flex-col items-center gap-6">
-        <div className="flex items-center gap-3">
-          <Logo width={40} height={40} />
-          <div><div className="text-foreground font-mono text-lg font-bold">Tiny<span className="text-primary">POS</span></div><div className="text-muted-foreground font-mono text-[10px] tracking-widest">by Binary Labs</div></div>
+    <div className="flex min-h-svh w-full items-center justify-center p-6 md:p-10">
+      <div className="w-full max-w-sm flex flex-col gap-6">
+        <div className="flex flex-col items-center gap-2">
+          <Link href="/" className="flex flex-col items-center gap-2 font-medium">
+            <div className="flex h-10 w-10 items-center justify-center rounded-none bg-primary text-primary-foreground">
+              <Logo width={24} height={24} className="brightness-0 invert" />
+            </div>
+            <span className="sr-only">TinyPOS</span>
+          </Link>
+          <h1 className="text-xl font-bold font-mono">Tiny<span className="text-primary">POS</span></h1>
         </div>
-        <SignUp appearance={{ elements: { rootBox: "shadow-none", card: "bg-card border border-border shadow-none rounded-none", headerTitle: "text-card-foreground font-mono", headerSubtitle: "text-muted-foreground", formFieldInput: "bg-background border-border text-foreground rounded-none focus:border-primary", formButtonPrimary: "bg-primary hover:bg-primary/90 text-primary-foreground rounded-none font-mono", footerAction: "hidden", footerPages: "hidden" } }} />
+        <SignUpForm />
+        <div className="text-center text-sm text-muted-foreground">
+          Already have an account?{" "}
+          <Link href="/sign-in" className="underline underline-offset-4 hover:text-primary">
+            Log in
+          </Link>
+        </div>
       </div>
     </div>
   );
