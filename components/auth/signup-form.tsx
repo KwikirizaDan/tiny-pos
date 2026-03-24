@@ -12,14 +12,26 @@ export function SignUpForm() {
           Create an account to start managing your shop
         </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="[&_.cl-footer]:hidden [&_.cl-internal-b389ae]:hidden [&_.cl-internal-1809asf]:hidden">
         <SignUp
           appearance={{
+            layout: {
+              logoPlacement: "none",
+            },
             elements: {
               rootBox: "w-full",
               card: "shadow-none border-none p-0 bg-transparent",
               header: "hidden",
+              headerTitle: "hidden",
+              headerSubtitle: "hidden",
               footer: "hidden",
+              footerAction: "hidden",
+              internal: "hidden",
+              memberships_logo_clerk: "hidden",
+              memberships_logo_clerk__memberships: "hidden",
+              memberships_logo_clerk__clerk: "hidden",
+              memberships_logo_clerk_box: "hidden",
+              footerPages: "hidden",
               formButtonPrimary:
                 "bg-primary hover:bg-primary/90 text-primary-foreground rounded-none font-mono w-full shadow-none",
               formFieldInput:
