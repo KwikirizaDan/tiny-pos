@@ -1,15 +1,17 @@
 "use client";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { toast } from "sonner";
 import {
   Plus, Minus, Trash2, ShoppingCart, CreditCard,
-  Banknote, Search, CheckCircle2, X, Printer,
+  Banknote, Search, CheckCircle2, X, Printer, Wifi, WifiOff
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/lib/utils";
 import type { Product, Category, Vendor, Sale } from "@/db/schema";
+import { createOrder } from "@/app/(dashboard)/orders/actions";
+import { openDB, syncToIDB, getFromIDB, addPendingSale, getPendingSales, clearPendingSale } from "@/lib/idb";
 
 interface CartItem { product: Product; quantity: number; }
 const TAX_RATE = 0.0;
@@ -22,7 +24,9 @@ interface POSTerminalProps {
   receiptFooter?: string;
 }
 
-export function POSTerminal({ products, categories, vendor, cashierId, receiptFooter }: POSTerminalProps) {
+export function POSTerminal({ products: initialProducts, categories: initialCategories, vendor, cashierId, receiptFooter }: POSTerminalProps) {
+  const [products, setProducts] = useState(initialProducts);
+  const [categories, setCategories] = useState(initialCategories);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [search, setSearch] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "card">("cash");
@@ -32,6 +36,50 @@ export function POSTerminal({ products, categories, vendor, cashierId, receiptFo
   const [lastCartItems, setLastCartItems] = useState<CartItem[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [cartOpen, setCartOpen] = useState(false);
+  const [isOnline, setIsOnline] = useState(true);
+
+  useEffect(() => {
+    setIsOnline(navigator.onLine);
+    window.addEventListener("online", () => {
+      setIsOnline(true);
+      syncPendingSales();
+    });
+    window.addEventListener("offline", () => setIsOnline(false));
+
+    // Sync initial data to IDB
+    syncToIDB("products", initialProducts);
+    syncToIDB("categories", initialCategories);
+
+    // If offline, load from IDB
+    if (!navigator.onLine) {
+      loadFromIDB();
+    }
+  }, []);
+
+  const loadFromIDB = async () => {
+    const [p, c] = await Promise.all([
+      getFromIDB("products"),
+      getFromIDB("categories"),
+    ]);
+    if (p.length) setProducts(p);
+    if (c.length) setCategories(c);
+  };
+
+  const syncPendingSales = async () => {
+    const pending = await getPendingSales();
+    if (pending.length === 0) return;
+
+    toast.info(`Syncing ${pending.length} offline sales...`);
+    for (const sale of pending) {
+      try {
+        await createOrder(sale.data);
+        await clearPendingSale(sale.id);
+      } catch (err) {
+        console.error("Failed to sync sale:", err);
+      }
+    }
+    toast.success("All offline sales synced!");
+  };
 
   const filtered = useMemo(() => {
     return products.filter((p) => {
@@ -102,9 +150,9 @@ body { font-family:'Courier New',monospace;font-size:12px;color:#000;background:
 <hr class="divider">
 ${items.map((item) => `<div class="row"><span>${item.product.name} × ${item.quantity}</span><span>${formatUGX(Number(item.product.price) * item.quantity)}</span></div>`).join("")}
 <hr class="divider">
-<div class="row"><span>Subtotal</span><span>${formatUGX(subtotal)}</span></div>
-${tax > 0 ? `<div class="row"><span>Tax</span><span>${formatUGX(tax)}</span></div>` : ""}
-<div class="row-total"><span>TOTAL</span><span>${formatUGX(total)}</span></div>
+<div class="row"><span>Subtotal</span><span>${formatUGX(Number(sale.subtotal))}</span></div>
+${Number(sale.taxAmount) > 0 ? `<div class="row"><span>Tax</span><span>${formatUGX(Number(sale.taxAmount))}</span></div>` : ""}
+<div class="row-total"><span>TOTAL</span><span>${formatUGX(Number(sale.totalAmount))}</span></div>
 <hr class="divider">
 <div class="barcode"><span style="width:1px"></span><span style="width:3px"></span><span style="width:1px"></span><span style="width:2px"></span><span style="width:1px"></span><span style="width:3px"></span><span style="width:2px"></span><span style="width:1px"></span><span style="width:3px"></span><span style="width:1px"></span><span style="width:2px"></span><span style="width:3px"></span></div>
 <div class="footer">${receiptFooter ?? "Thank you for shopping with us!"}<br>Powered by TinyPOS · Binary Labs</div>
@@ -116,32 +164,48 @@ ${tax > 0 ? `<div class="row"><span>Tax</span><span>${formatUGX(tax)}</span></di
   const handleCheckout = async () => {
     if (!cart.length) { toast.warning("Cart is empty"); return; }
     setLoading(true);
+
+    const orderData = {
+      cashierId,
+      items: cart.map((i) => ({
+        productId: i.product.id,
+        productName: i.product.name,
+        quantity: i.quantity,
+        unitPrice: i.product.price,
+      })),
+      paymentMethod,
+    };
+
+    if (!navigator.onLine) {
+      // Offline mode
+      const offlineSale: any = {
+        id: `offline-${Date.now()}`,
+        vendorId: vendor.id,
+        cashierId,
+        subtotal: subtotal.toFixed(2),
+        taxAmount: "0",
+        totalAmount: total.toFixed(2),
+        paymentMethod,
+        status: "completed",
+        createdAt: new Date(),
+      };
+
+      await addPendingSale({ data: orderData });
+
+      setLastSale(offlineSale as Sale);
+      setLastCartItems([...cart]);
+      setCart([]);
+      setCartOpen(false);
+      setSaleComplete(true);
+      toast.success("Sale complete (Saved locally)");
+      setLoading(false);
+      return;
+    }
+
     try {
-      const res = await fetch("/api/orders", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          vendorId: vendor.id,
-          cashierId,
-          items: cart.map((i) => ({
-            productId: i.product.id,
-            productName: i.product.name,
-            quantity: i.quantity,
-            unitPrice: i.product.price,
-          })),
-          subtotal: subtotal.toFixed(2),
-          tax: tax.toFixed(2),
-          discountAmount: "0",
-          totalAmount: total.toFixed(2),
-          paymentMethod,
-        }),
-      });
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error ?? "Checkout failed");
-      }
-      const sale = await res.json();
-      setLastSale(sale);
+      const sale = await createOrder(orderData);
+
+      setLastSale(sale as Sale);
       setLastCartItems([...cart]);
       setCart([]);
       setCartOpen(false);
@@ -159,10 +223,15 @@ ${tax > 0 ? `<div class="row"><span>Tax</span><span>${formatUGX(tax)}</span></di
 
       {/* Product grid */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden px-3 pt-3 md:px-0 md:pt-0">
-        <div className="relative mb-2">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Search products or SKU…" className="pl-8 h-10"
-            value={search} onChange={(e) => setSearch(e.target.value)} />
+        <div className="flex items-center gap-2 mb-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input placeholder="Search products or SKU…" className="pl-8 h-10"
+              value={search} onChange={(e) => setSearch(e.target.value)} />
+          </div>
+          <div className={`p-2 border ${isOnline ? "text-emerald-600 bg-emerald-50 border-emerald-200" : "text-amber-600 bg-amber-50 border-amber-200"}`}>
+            {isOnline ? <Wifi className="h-4 w-4" /> : <WifiOff className="h-4 w-4" />}
+          </div>
         </div>
 
         <div className="flex gap-1.5 mb-3 overflow-x-auto pb-1">

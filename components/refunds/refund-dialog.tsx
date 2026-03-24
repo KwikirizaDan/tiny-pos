@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import type { Refund, Sale } from "@/db/schema";
+import { createRefund } from "@/app/(dashboard)/refunds/actions";
 
 interface Props {
   open: boolean;
@@ -26,15 +27,16 @@ export function RefundDialog({ open, onOpenChange, sales, onSave }: Props) {
     e.preventDefault();
     setLoading(true);
     try {
-      const res = await fetch("/api/refunds", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) });
-      if (!res.ok) { const err = await res.json(); throw new Error(err.error ?? "Failed"); }
-      const saved = await res.json();
-      onSave(saved);
+      const saved = await createRefund(form);
+      onSave(saved as Refund);
       toast.success("Refund processed");
       onOpenChange(false);
       setForm({ saleId: "", amount: "", reason: "" });
-    } catch (e: any) { toast.error(e.message ?? "Something went wrong"); }
-    finally { setLoading(false); }
+    } catch (e: any) {
+      toast.error(e.message ?? "Something went wrong");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { Vendor } from "@/db/schema";
+import { updateMultipleSettings } from "@/app/(dashboard)/settings/actions";
 
 const ACCENT_COLORS = [
   { label: "Violet", value: "#7c3aed" },
@@ -34,19 +35,11 @@ export function SettingsClient({ vendor, settings }: Props) {
   });
   const [loading, setLoading] = useState(false);
 
-  const saveSetting = async (key: string, value: string) => {
-    await fetch("/api/settings", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ key, value }),
-    });
-  };
-
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
-      await Promise.all(Object.entries(form).map(([key, value]) => saveSetting(key, value)));
+      await updateMultipleSettings(form);
       // Apply accent color immediately
       document.documentElement.style.setProperty("--accent-color", form.accent_color);
       localStorage.setItem("accent_color", form.accent_color);
