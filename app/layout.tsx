@@ -3,6 +3,8 @@ import { ClerkProvider } from "@clerk/nextjs";
 import { Toaster } from "sonner";
 import "./globals.css";
 import { clerkLocalization, clerkAppearance } from "@/lib/clerk";
+import { dark } from "@clerk/ui/themes";
+import { ui } from '@clerk/ui'
 
 export const metadata: Metadata = {
   title: "TinyPOS",
@@ -35,7 +37,10 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body suppressHydrationWarning>
-        <ClerkProvider localization={clerkLocalization} appearance={clerkAppearance}>
+   <ClerkProvider localization={clerkLocalization}  appearance={{
+     theme: dark,
+   }}
+ >
           <script
             dangerouslySetInnerHTML={{
               __html: `
