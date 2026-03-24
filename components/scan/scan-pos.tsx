@@ -58,22 +58,35 @@ export function ScanPOS({
   }, []);
 
   const handleScan = useCallback((text: string) => {
-    if (cooldownRef.current) return;
+    if (cooldownRef.current || !text) return;
     cooldownRef.current = true;
     setTimeout(() => { cooldownRef.current = false; }, 2000);
 
+    const scannedValue = text.trim();
     let product: Product | undefined;
+
+    // 1. Try JSON parsing (supports {"id": "...", "sku": "..."})
     try {
-      const data = JSON.parse(text);
-      product = products.find((p) => p.id === data.id || p.sku === data.sku);
+      const data = JSON.parse(scannedValue);
+      const searchId = typeof data === "object" ? data.id : data;
+      const searchSku = typeof data === "object" ? data.sku : data;
+
+      product = products.find((p) =>
+        (searchId && p.id === searchId) ||
+        (searchSku && p.sku && p.sku.toLowerCase() === String(searchSku).toLowerCase())
+      );
     } catch {
-      product = products.find((p) => p.sku === text.trim());
+      // 2. Fallback to raw string matching (ID or SKU)
+      product = products.find((p) =>
+        p.id === scannedValue ||
+        (p.sku && p.sku.toLowerCase() === scannedValue.toLowerCase())
+      );
     }
 
     if (product) {
       addToCart(product);
     } else {
-      toast.error("Product not found", { duration: 1500 });
+      toast.error(`Product not found: ${scannedValue.slice(0, 20)}`, { duration: 2000 });
     }
   }, [products, addToCart]);
 
