@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { Plus, Pencil, Trash2, Users, Shield, ShieldCheck, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { StaffDialog } from "./staff-dialog";
 import { formatDate } from "@/lib/utils";
 import type { User } from "@/db/schema";
@@ -15,6 +16,7 @@ export function StaffClient({ staff: init }: { staff: User[] }) {
   const [staff, setStaff] = useState(init);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editStaff, setEditStaff] = useState<User | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<User | null>(null);
 
   const handleDelete = async (id: string) => {
     const res = await fetch(`/api/staff/${id}`, { method: "DELETE" });
@@ -69,7 +71,7 @@ export function StaffClient({ staff: init }: { staff: User[] }) {
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
                     <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setEditStaff(member); setDialogOpen(true); }}><Pencil className="h-3.5 w-3.5" /></Button>
-                    <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => handleDelete(member.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => setConfirmDelete(member)}><Trash2 className="h-3.5 w-3.5" /></Button>
                   </div>
                 </div>
                 <div className="flex items-center justify-between">
@@ -91,6 +93,21 @@ export function StaffClient({ staff: init }: { staff: User[] }) {
       )}
 
       <StaffDialog open={dialogOpen} onOpenChange={setDialogOpen} member={editStaff} onSave={handleSave} />
+
+      <Dialog open={!!confirmDelete} onOpenChange={(open) => !open && setConfirmDelete(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Delete</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete staff member "{confirmDelete?.name ?? confirmDelete?.email}"? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmDelete(null)}>No</Button>
+            <Button variant="destructive" onClick={() => { if (confirmDelete) handleDelete(confirmDelete.id); setConfirmDelete(null); }}>Yes</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

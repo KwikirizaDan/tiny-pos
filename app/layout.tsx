@@ -1,10 +1,8 @@
 import type { Metadata } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
 import { Toaster } from "sonner";
+import { shadcn} from "@clerk/themes";
 import "./globals.css";
-import { clerkLocalization, clerkAppearance } from "@/lib/clerk";
-import { dark } from "@clerk/ui/themes";
-import { ui } from '@clerk/ui'
 
 export const metadata: Metadata = {
   title: "TinyPOS",
@@ -36,11 +34,8 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body suppressHydrationWarning>
-   <ClerkProvider localization={clerkLocalization}  appearance={{
-     theme: dark,
-   }}
- >
+    <body suppressHydrationWarning>
+   <ClerkProvider appearance={shadcn}>
           <script
             dangerouslySetInnerHTML={{
               __html: `
@@ -53,12 +48,15 @@ export default function RootLayout({
                   });
                 }
 
-                // Ensure dark mode is applied based on preference or system
-                const isDark = localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches);
-                if (isDark) {
+                // Ensure theme follows system preference by default
+                const stored = localStorage.getItem('theme');
+                if (stored === 'dark') {
                   document.documentElement.classList.add('dark');
-                } else {
+                } else if (stored === 'light') {
                   document.documentElement.classList.remove('dark');
+                } else {
+                  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                  document.documentElement.classList.toggle('dark', prefersDark);
                 }
               `,
             }}

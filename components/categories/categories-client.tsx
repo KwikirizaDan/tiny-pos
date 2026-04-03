@@ -3,6 +3,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Plus, Pencil, Trash2, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { CategoryDialog } from "./category-dialog";
 import type { Category } from "@/db/schema";
 
@@ -12,6 +13,7 @@ export function CategoriesClient({ categories: init, productCounts }: { categori
   const [categories, setCategories] = useState(init);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editCategory, setEditCategory] = useState<Category | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<Category | null>(null);
 
   const handleDelete = async (id: string) => {
     const res = await fetch(`/api/categories/${id}`, { method: "DELETE" });
@@ -45,13 +47,28 @@ export function CategoriesClient({ categories: init, productCounts }: { categori
               </div>
               <div className="flex items-center gap-1 shrink-0">
                 <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100" onClick={() => { setEditCategory(cat); setDialogOpen(true); }}><Pencil className="h-3.5 w-3.5" /></Button>
-                <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100 text-destructive hover:text-destructive" onClick={() => handleDelete(cat.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
+                <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100 text-destructive hover:text-destructive" onClick={() => setConfirmDelete(cat)}><Trash2 className="h-3.5 w-3.5" /></Button>
               </div>
             </div>
           ))}
         </div>
       )}
       <CategoryDialog open={dialogOpen} onOpenChange={setDialogOpen} category={editCategory} onSave={handleSave} presetColors={PRESET_COLORS} />
+
+      <Dialog open={!!confirmDelete} onOpenChange={(open) => !open && setConfirmDelete(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Delete</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete category "{confirmDelete?.name}"? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmDelete(null)}>No</Button>
+            <Button variant="destructive" onClick={() => { if (confirmDelete) handleDelete(confirmDelete.id); setConfirmDelete(null); }}>Yes</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

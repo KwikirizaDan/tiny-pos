@@ -9,7 +9,7 @@ export default async function HomePage() {
   if (!userId) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <SignIn />
+        <SignIn routing="hash" />
       </div>
     );
   }

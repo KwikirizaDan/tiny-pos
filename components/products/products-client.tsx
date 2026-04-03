@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { ProductDialog } from "./product-dialog";
 import { formatCurrency } from "@/lib/utils";
 import type { Product, Category } from "@/db/schema";
@@ -32,6 +33,7 @@ export function ProductsClient({
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editProduct, setEditProduct] = useState<Product | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<Product | null>(null);
 
   const handleDelete = async (id: string) => {
     try {
@@ -123,7 +125,7 @@ export function ProductsClient({
             <Pencil className="h-3.5 w-3.5" />
           </Button>
           <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive"
-            onClick={() => handleDelete(row.original.id)}>
+            onClick={() => setConfirmDelete(row.original)}>
             <Trash2 className="h-3.5 w-3.5" />
           </Button>
         </div>
@@ -215,6 +217,21 @@ export function ProductsClient({
         vendorId={vendorId}
         onSave={handleSave}
       />
+
+      <Dialog open={!!confirmDelete} onOpenChange={(open) => !open && setConfirmDelete(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Delete</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete product "{confirmDelete?.name}"? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmDelete(null)}>No</Button>
+            <Button variant="destructive" onClick={() => { if (confirmDelete) handleDelete(confirmDelete.id); setConfirmDelete(null); }}>Yes</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

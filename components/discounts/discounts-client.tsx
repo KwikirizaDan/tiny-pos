@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { Plus, Pencil, Trash2, Tag, ToggleLeft, ToggleRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { DiscountDialog } from "./discount-dialog";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import type { Discount } from "@/db/schema";
@@ -12,6 +13,7 @@ export function DiscountsClient({ discounts: init }: { discounts: Discount[] }) 
   const [discounts, setDiscounts] = useState(init);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editDiscount, setEditDiscount] = useState<Discount | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<Discount | null>(null);
 
   const handleDelete = async (id: string) => {
     const res = await fetch(`/api/discounts/${id}`, { method: "DELETE" });
@@ -67,7 +69,7 @@ export function DiscountsClient({ discounts: init }: { discounts: Discount[] }) 
                     {d.isActive ? <ToggleRight className="h-4 w-4 text-primary" /> : <ToggleLeft className="h-4 w-4" />}
                   </Button>
                   <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setEditDiscount(d); setDialogOpen(true); }}><Pencil className="h-3.5 w-3.5" /></Button>
-                  <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => handleDelete(d.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
+                  <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => setConfirmDelete(d)}><Trash2 className="h-3.5 w-3.5" /></Button>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-2 text-xs">
@@ -85,6 +87,21 @@ export function DiscountsClient({ discounts: init }: { discounts: Discount[] }) 
       )}
 
       <DiscountDialog open={dialogOpen} onOpenChange={setDialogOpen} discount={editDiscount} onSave={handleSave} />
+
+      <Dialog open={!!confirmDelete} onOpenChange={(open) => !open && setConfirmDelete(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Delete</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete discount "{confirmDelete?.code}"? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmDelete(null)}>No</Button>
+            <Button variant="destructive" onClick={() => { if (confirmDelete) handleDelete(confirmDelete.id); setConfirmDelete(null); }}>Yes</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
