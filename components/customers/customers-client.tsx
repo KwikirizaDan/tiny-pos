@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { CustomerDialog } from "./customer-dialog";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import type { Customer } from "@/db/schema";
+import type { Customer } from "@/types/pos";
 
 const col = createColumnHelper<Customer>();
 
@@ -54,7 +54,7 @@ export function CustomersClient({ customers: init }: { customers: Customer[] }) 
     }),
     col.accessor("totalSpent", {
       header: ({ column }) => <button className="flex items-center gap-1 text-xs uppercase tracking-widest text-muted-foreground hover:text-foreground" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>Total Spent <ArrowUpDown className="h-3 w-3" /></button>,
-      cell: (i) => <span className="font-medium text-sm">{formatCurrency(i.getValue() ?? 0)}</span>,
+      cell: (i) => <span className="font-medium text-sm">{formatCurrency(Number(i.getValue() ?? 0))}</span>,
     }),
     col.accessor("createdAt", {
       header: () => <span className="text-xs uppercase tracking-widest text-muted-foreground">Joined</span>,

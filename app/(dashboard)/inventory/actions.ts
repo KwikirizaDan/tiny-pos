@@ -1,8 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getDb, inventoryLogs, products } from "@/db";
-import { eq, and } from "drizzle-orm";
+import { createClient } from "@/lib/supabase/server";
 import { getVendor } from "@/lib/vendor";
 import { z } from "zod";
 
@@ -16,37 +15,47 @@ const inventoryLogSchema = z.object({
 export async function createInventoryLog(data: z.infer<typeof inventoryLogSchema>) {
   const vendor = await getVendor();
   const parsed = inventoryLogSchema.parse(data);
-
-  const db = getDb();
+  const supabase = await createClient();
 
   // Verify product belongs to this vendor
-  const [product] = await db
-    .select()
-    .from(products)
-    .where(and(eq(products.id, parsed.productId), eq(products.vendorId, vendor.id)));
+  const { data: product, error: productError } = await supabase
+    .from("products")
+    .select("*")
+    .eq("id", parsed.productId)
+    .eq("vendor_id", vendor.id)
+    .single();
 
-  if (!product) throw new Error("Product not found");
+  if (productError || !product) throw new Error("Product not found");
 
-  const before = product.stockQuantity ?? 0;
+  const before = product.stock_quantity ?? 0;
   const after = before + parsed.quantityChange;
 
-  const [log] = await db
-    .insert(inventoryLogs)
-    .values({
-      ...parsed,
-      vendorId: vendor.id,
-      quantityBefore: before,
-      quantityAfter: after,
+  const { data: log, error: logError } = await supabase
+    .from("inventory_logs")
+    .insert({
+      product_id: parsed.productId,
+      change_type: parsed.changeType,
+      quantity_change: parsed.quantityChange,
+      notes: parsed.notes,
+      vendor_id: vendor.id,
+      quantity_before: before,
+      quantity_after: after,
     })
-    .returning();
+    .select()
+    .single();
 
-  await db
-    .update(products)
-    .set({
-      stockQuantity: after,
-      updatedAt: new Date(),
+  if (logError) throw new Error(logError.message);
+
+  const { error: updateError } = await supabase
+    .from("products")
+    .update({
+      stock_quantity: after,
+      updated_at: new Date().toISOString(),
     })
-    .where(and(eq(products.id, parsed.productId), eq(products.vendorId, vendor.id)));
+    .eq("id", parsed.productId)
+    .eq("vendor_id", vendor.id);
+
+  if (updateError) throw new Error(updateError.message);
 
   revalidatePath("/inventory");
   revalidatePath("/products");

@@ -5,7 +5,7 @@ import { Save, Store, Receipt, Bell, Palette } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import type { Vendor } from "@/db/schema";
+import type { Vendor } from "@/types/pos";
 import { updateMultipleSettings } from "@/app/(dashboard)/settings/actions";
 
 const ACCENT_COLORS = [

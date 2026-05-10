@@ -18,7 +18,7 @@ const navGroups = [
       { href: "/pos", label: "Terminal", icon: Monitor },
       { href: "/scan", label: "Scan POS", icon: ScanLine },
       { href: "/orders", label: "Orders", icon: ShoppingCart },
-      { href: "/refunds", label: "Refunds", icon: RefreshCcw },
+      { href: "/refunds", label: "Refunds", icon: RefreshCcw, roles: ["owner", "manager"] },
     ],
   },
   {
@@ -27,28 +27,28 @@ const navGroups = [
       { href: "/products", label: "Products", icon: Package },
       { href: "/categories", label: "Categories", icon: Tag },
       { href: "/qr-codes", label: "QR Codes", icon: QrCode },
-      { href: "/inventory", label: "Inventory", icon: Archive },
+      { href: "/inventory", label: "Inventory", icon: Archive, roles: ["owner", "manager"] },
     ],
   },
   {
     label: "Customers",
     items: [
       { href: "/customers", label: "Customers", icon: Users },
-      { href: "/discounts", label: "Discounts", icon: Percent },
+      { href: "/discounts", label: "Discounts", icon: Percent, roles: ["owner", "manager"] },
     ],
   },
   {
     label: "Insights",
     items: [
-      { href: "/reports", label: "Reports", icon: BarChart3 },
+      { href: "/reports", label: "Reports", icon: BarChart3, roles: ["owner", "manager"] },
     ],
   },
   {
     label: "Admin",
     items: [
-      { href: "/staff", label: "Staff", icon: UserCog },
-      { href: "/audit", label: "Audit Logs", icon: Shield },
-      { href: "/settings", label: "Settings", icon: Settings },
+      { href: "/staff", label: "Staff", icon: UserCog, roles: ["owner", "manager"] },
+      { href: "/audit", label: "Audit Logs", icon: Shield, roles: ["owner"] },
+      { href: "/settings", label: "Settings", icon: Settings, roles: ["owner", "manager"] },
     ],
   },
 ];
@@ -56,10 +56,12 @@ const navGroups = [
 interface SidebarProps {
   collapsed: boolean;
   onToggle: () => void;
+  userRole: "owner" | "manager" | "cashier";
 }
 
-export function Sidebar({ collapsed, onToggle }: SidebarProps) {
+export function Sidebar({ collapsed, onToggle, userRole }: SidebarProps) {
   const pathname = usePathname();
+
   return (
     <aside className={cn(
       "border-r bg-card flex flex-col shrink-0 transition-all duration-300",
@@ -67,7 +69,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
     )}>
       {/* Logo */}
       <div className="h-14 flex items-center justify-between px-3 border-b shrink-0">
-        <div className="flex items-center gap-2.5 overflow-hidden">
+        <div className="flex items-center gap-2.5 min-w-0">
           <Logo width={28} height={28} />
           {!collapsed && (
             <div className="flex flex-col leading-tight">
@@ -90,38 +92,43 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
 
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto p-2 space-y-1">
-        {navGroups.map((group) => (
-          <div key={group.label}>
-            {!collapsed && (
-              <p className="text-[10px] uppercase tracking-widest text-muted-foreground px-2 pt-3 pb-1">
-                {group.label}
-              </p>
-            )}
-            {collapsed && <div className="pt-2" />}
-            <div className="space-y-0.5">
-              {group.items.map(({ href, label, icon: Icon }) => {
-                const active = pathname === href || pathname.startsWith(href + "/");
-                return (
-                  <Link
-                    key={href}
-                    href={href}
-                    title={collapsed ? label : undefined}
-                    className={cn(
-                      "flex items-center gap-2.5 px-2 py-2 text-sm transition-colors",
-                      collapsed ? "justify-center" : "",
-                      active
-                        ? "bg-primary/10 text-primary font-medium"
-                        : "text-muted-foreground hover:text-foreground hover:bg-accent"
-                    )}
-                  >
-                    <Icon className="h-4 w-4 shrink-0" />
-                    {!collapsed && label}
-                  </Link>
-                );
-              })}
+        {navGroups.map((group) => {
+          const visibleItems = group.items.filter(i => !i.roles || (i.roles as string[]).includes(userRole));
+          if (visibleItems.length === 0) return null;
+
+          return (
+            <div key={group.label}>
+              {!collapsed && (
+                <p className="text-[10px] uppercase tracking-widest text-muted-foreground px-2 pt-3 pb-1">
+                  {group.label}
+                </p>
+              )}
+              {collapsed && <div className="pt-2" />}
+              <div className="space-y-0.5">
+                {visibleItems.map(({ href, label, icon: Icon }) => {
+                  const active = pathname === href || pathname.startsWith(href + "/");
+                  return (
+                    <Link
+                      key={href}
+                      href={href}
+                      title={collapsed ? label : undefined}
+                      className={cn(
+                        "flex items-center gap-2.5 px-2 py-2 text-sm transition-colors",
+                        collapsed ? "justify-center" : "",
+                        active
+                          ? "bg-primary/10 text-primary font-medium"
+                          : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                      )}
+                    >
+                      <Icon className="h-4 w-4 shrink-0" />
+                      {!collapsed && label}
+                    </Link>
+                  );
+                })}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </nav>
 
       {!collapsed && (

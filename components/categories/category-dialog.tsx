@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import type { Category } from "@/db/schema";
+import type { Category } from "@/types/pos";
 import { createCategory, updateCategory } from "@/app/(dashboard)/categories/actions";
 
 interface Props { open: boolean; onOpenChange: (o: boolean) => void; category: Category | null; onSave: (c: Category) => void; presetColors: string[]; }

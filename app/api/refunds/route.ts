@@ -1,40 +1,82 @@
-import { auth } from "@clerk/nextjs/server";
+import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
-import { getDb, refunds, sales, vendors } from "@/db";
-import { eq, and, desc } from "drizzle-orm";
 import { z } from "zod";
 
-const schema = z.object({ saleId: z.string().uuid(), amount: z.string(), reason: z.string().optional() });
+const schema = z.object({
+  saleId: z.string().uuid(),
+  amount: z.union([z.string(), z.number()]),
+  reason: z.string().optional()
+});
 
-async function getVendorId(clerkId: string) {
-  const db = getDb();
-  const [v] = await db.select({ id: vendors.id }).from(vendors).where(eq(vendors.ownerClerkId, clerkId));
-  return v?.id ?? null;
+async function getVendorFromAuthId(supabase: any, authId: string) {
+  const { data: vendor } = await supabase
+    .from('vendors')
+    .select('*')
+    .eq('owner_id', authId)
+    .single();
+  return vendor ?? null;
 }
 
 export async function GET() {
-  const { userId } = await auth();
-  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const vendorId = await getVendorId(userId);
-  if (!vendorId) return NextResponse.json({ error: "Vendor not found" }, { status: 404 });
-  const db = getDb();
-  const data = await db.select().from(refunds).where(eq(refunds.vendorId, vendorId)).orderBy(desc(refunds.createdAt));
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const vendor = await getVendorFromAuthId(supabase, user.id);
+  if (!vendor) return NextResponse.json({ error: "Vendor not found" }, { status: 404 });
+
+  const { data, error } = await supabase
+    .from('refunds')
+    .select('*')
+    .eq('vendor_id', vendor.id)
+    .order('created_at', { ascending: false });
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json(data);
 }
 
 export async function POST(req: NextRequest) {
-  const { userId } = await auth();
-  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const parsed = schema.safeParse(await req.json());
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const body = await req.json();
+  const parsed = schema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: parsed.error.issues }, { status: 400 });
-  const vendorId = await getVendorId(userId);
-  if (!vendorId) return NextResponse.json({ error: "Vendor not found" }, { status: 404 });
-  const db = getDb();
+
+  const vendor = await getVendorFromAuthId(supabase, user.id);
+  if (!vendor) return NextResponse.json({ error: "Vendor not found" }, { status: 404 });
+
   // SECURITY FIX: Verify sale belongs to this vendor
-  const [sale] = await db.select().from(sales).where(and(eq(sales.id, parsed.data.saleId), eq(sales.vendorId, vendorId)));
-  if (!sale) return NextResponse.json({ error: "Sale not found" }, { status: 404 });
+  const { data: sale, error: saleError } = await supabase
+    .from('sales')
+    .select('*')
+    .eq('id', parsed.data.saleId)
+    .eq('vendor_id', vendor.id)
+    .single();
+
+  if (saleError || !sale) return NextResponse.json({ error: "Sale not found" }, { status: 404 });
   if (sale.status === "refunded") return NextResponse.json({ error: "Already refunded" }, { status: 409 });
-  const [refund] = await db.insert(refunds).values({ ...parsed.data, vendorId, status: "processed" }).returning();
-  await db.update(sales).set({ status: "refunded", updatedAt: new Date() }).where(and(eq(sales.id, parsed.data.saleId), eq(sales.vendorId, vendorId)));
+
+  const { data: refund, error: refundError } = await supabase
+    .from('refunds')
+    .insert({
+      sale_id: parsed.data.saleId,
+      amount: parsed.data.amount,
+      reason: parsed.data.reason,
+      vendor_id: vendor.id,
+      status: "processed"
+    })
+    .select()
+    .single();
+
+  if (refundError) return NextResponse.json({ error: refundError.message }, { status: 500 });
+
+  await supabase
+    .from('sales')
+    .update({ status: "refunded", updated_at: new Date().toISOString() })
+    .eq('id', parsed.data.saleId)
+    .eq('vendor_id', vendor.id);
+
   return NextResponse.json(refund, { status: 201 });
 }

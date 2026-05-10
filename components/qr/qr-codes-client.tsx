@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { Printer, QrCode, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/utils";
-import type { Product } from "@/db/schema";
+import type { Product } from "@/types/pos";
 
 interface ProductQR { product: Product; dataUrl: string; }
 
@@ -53,7 +53,7 @@ export function QRCodesClient({ products, storeName }: { products: Product[]; st
               <div key={product.id} className="border p-2 flex flex-col items-center gap-1.5">
                 <img src={dataUrl} alt={product.name} className="w-20 h-20" />
                 <p className="text-[10px] font-medium text-center leading-tight line-clamp-2">{product.name}</p>
-                <p className="text-[11px] font-medium text-primary">{formatCurrency(product.price)}</p>
+                <p className="text-[11px] font-medium text-primary">{formatCurrency(Number(product.price))}</p>
                 {product.sku && <p className="text-[9px] text-muted-foreground">{product.sku}</p>}
               </div>
             ))}

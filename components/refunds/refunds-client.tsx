@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { RefundDialog } from "./refund-dialog";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import type { Refund, Sale } from "@/db/schema";
+import type { Refund, Sale } from "@/types/pos";
 
 const statusVariant: Record<string, "success" | "warning" | "destructive"> = {
   processed: "success", pending: "warning", rejected: "destructive",
@@ -48,7 +48,7 @@ export function RefundsClient({ refunds: init, sales }: { refunds: Refund[]; sal
                 <TableRow key={r.id}>
                   <TableCell className="text-xs text-muted-foreground">{formatDate(r.createdAt!)}</TableCell>
                   <TableCell className="font-mono text-xs">{r.saleId?.slice(0, 8).toUpperCase()}</TableCell>
-                  <TableCell className="font-medium text-sm">{formatCurrency(r.amount)}</TableCell>
+                  <TableCell className="font-medium text-sm">{formatCurrency(Number(r.amount))}</TableCell>
                   <TableCell className="text-sm text-muted-foreground">{r.reason ?? "—"}</TableCell>
                   <TableCell>
                     <Badge variant={statusVariant[r.status ?? "pending"]} className="capitalize text-[10px]">

@@ -1,8 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getDb, categories } from "@/db";
-import { eq, and } from "drizzle-orm";
+import { createClient } from "@/lib/supabase/server";
 import { getVendor } from "@/lib/vendor";
 import { z } from "zod";
 
@@ -14,15 +13,19 @@ const categorySchema = z.object({
 export async function createCategory(data: z.infer<typeof categorySchema>) {
   const vendor = await getVendor();
   const parsed = categorySchema.parse(data);
+  const supabase = await createClient();
 
-  const db = getDb();
-  const [category] = await db
-    .insert(categories)
-    .values({
-      ...parsed,
-      vendorId: vendor.id,
+  const { data: category, error } = await supabase
+    .from("categories")
+    .insert({
+      name: parsed.name,
+      color: parsed.color,
+      vendor_id: vendor.id,
     })
-    .returning();
+    .select()
+    .single();
+
+  if (error) throw new Error(error.message);
 
   revalidatePath("/categories");
   return category;
@@ -30,15 +33,20 @@ export async function createCategory(data: z.infer<typeof categorySchema>) {
 
 export async function updateCategory(id: string, data: Partial<z.infer<typeof categorySchema>>) {
   const vendor = await getVendor();
-  const db = getDb();
+  const supabase = await createClient();
 
-  const [category] = await db
-    .update(categories)
-    .set(data)
-    .where(and(eq(categories.id, id), eq(categories.vendorId, vendor.id)))
-    .returning();
+  const { data: category, error } = await supabase
+    .from("categories")
+    .update({
+      name: data.name,
+      color: data.color,
+    })
+    .eq("id", id)
+    .eq("vendor_id", vendor.id)
+    .select()
+    .single();
 
-  if (!category) throw new Error("Category not found");
+  if (error) throw new Error(error.message);
 
   revalidatePath("/categories");
   return category;
@@ -46,11 +54,15 @@ export async function updateCategory(id: string, data: Partial<z.infer<typeof ca
 
 export async function deleteCategory(id: string) {
   const vendor = await getVendor();
-  const db = getDb();
+  const supabase = await createClient();
 
-  await db
-    .delete(categories)
-    .where(and(eq(categories.id, id), eq(categories.vendorId, vendor.id)));
+  const { error } = await supabase
+    .from("categories")
+    .delete()
+    .eq("id", id)
+    .eq("vendor_id", vendor.id);
+
+  if (error) throw new Error(error.message);
 
   revalidatePath("/categories");
   return { success: true };

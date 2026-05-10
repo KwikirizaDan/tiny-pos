@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { Printer } from "lucide-react";
-import type { Sale, SaleItem } from "@/db/schema";
+import type { Sale, SaleItem } from "@/types/pos";
 
 interface Props {
   sale: Sale;

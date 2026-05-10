@@ -5,7 +5,7 @@ import { Plus, Pencil, Trash2, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { CategoryDialog } from "./category-dialog";
-import type { Category } from "@/db/schema";
+import type { Category } from "@/types/pos";
 
 const PRESET_COLORS = ["#7c3aed","#ea6c10","#16a34a","#dc2626","#2563eb","#db2777","#d97706","#0891b2"];
 

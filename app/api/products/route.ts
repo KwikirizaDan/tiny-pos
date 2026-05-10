@@ -1,14 +1,12 @@
-import { auth } from "@clerk/nextjs/server";
+import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
-import { getDb, products } from "@/db";
-import { eq } from "drizzle-orm";
 import { z } from "zod";
 
 const productSchema = z.object({
   name: z.string().min(1),
   description: z.string().optional(),
-  price: z.string().min(1),
-  costPrice: z.string().optional(),
+  price: z.union([z.string(), z.number()]),
+  costPrice: z.union([z.string(), z.number()]).optional(),
   stockQuantity: z.number().int().min(0),
   lowStockAlert: z.number().int().min(0).optional(),
   categoryId: z.string().uuid().optional().nullable(),
@@ -17,20 +15,27 @@ const productSchema = z.object({
 });
 
 export async function GET() {
-  const { userId } = await auth();
-  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const db = getDb();
-  const vendor = await getVendorFromClerkId(userId);
+  const vendor = await getVendorFromAuthId(supabase, user.id);
   if (!vendor) return NextResponse.json({ error: "Vendor not found" }, { status: 404 });
 
-  const data = await db.select().from(products).where(eq(products.vendorId, vendor.id));
+  const { data, error } = await supabase
+    .from('products')
+    .select('*')
+    .eq('vendor_id', vendor.id)
+    .is('deleted_at', null);
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json(data);
 }
 
 export async function POST(req: NextRequest) {
-  const { userId } = await auth();
-  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json();
   const parsed = productSchema.safeParse(body);
@@ -38,22 +43,36 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: parsed.error.issues }, { status: 400 });
   }
 
-  const db = getDb();
-  const vendor = await getVendorFromClerkId(userId);
+  const vendor = await getVendorFromAuthId(supabase, user.id);
   if (!vendor) return NextResponse.json({ error: "Vendor not found" }, { status: 404 });
 
-  const [product] = await db
-    .insert(products)
-    .values({ ...parsed.data, vendorId: vendor.id })
-    .returning();
+  const { data: product, error } = await supabase
+    .from('products')
+    .insert({
+      name: parsed.data.name,
+      description: parsed.data.description,
+      price: parsed.data.price,
+      cost_price: parsed.data.costPrice,
+      stock_quantity: parsed.data.stockQuantity,
+      low_stock_alert: parsed.data.lowStockAlert,
+      category_id: parsed.data.categoryId,
+      sku: parsed.data.sku,
+      is_active: parsed.data.isActive,
+      vendor_id: vendor.id,
+    })
+    .select()
+    .single();
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   return NextResponse.json(product, { status: 201 });
 }
 
-async function getVendorFromClerkId(clerkId: string) {
-  const { getDb: gdb, vendors } = await import("@/db");
-  const { eq: eqOp } = await import("drizzle-orm");
-  const db = gdb();
-  const [vendor] = await db.select().from(vendors).where(eqOp(vendors.ownerClerkId, clerkId));
+async function getVendorFromAuthId(supabase: any, authId: string) {
+  const { data: vendor } = await supabase
+    .from('vendors')
+    .select('*')
+    .eq('owner_id', authId)
+    .single();
   return vendor ?? null;
 }

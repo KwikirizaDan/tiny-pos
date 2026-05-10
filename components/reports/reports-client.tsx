@@ -121,7 +121,7 @@ export function ReportsClient({ vendorName }: { vendorName: string }) {
         body: data.topProducts.map((p) => [
           p.productName,
           String(p.totalQty),
-          formatCurrency(p.totalRevenue),
+          formatCurrency(Number(p.totalRevenue)),
         ]),
         headStyles: { fillColor: VIO as [number, number, number], textColor: [255,255,255], fontStyle: "bold", fontSize: 8 },
         bodyStyles: { fontSize: 8, textColor: [30,30,30] },
@@ -145,7 +145,7 @@ export function ReportsClient({ vendorName }: { vendorName: string }) {
         body: data.daily.map((d) => [
           d.date,
           String(d.totalCount),
-          formatCurrency(d.totalRevenue),
+          formatCurrency(Number(d.totalRevenue)),
         ]),
         headStyles: { fillColor: VIO as [number, number, number], textColor: [255,255,255], fontStyle: "bold", fontSize: 8 },
         bodyStyles: { fontSize: 8, textColor: [30,30,30] },
@@ -172,7 +172,7 @@ export function ReportsClient({ vendorName }: { vendorName: string }) {
             formatDate(s.createdAt),
             s.paymentMethod ?? "—",
             s.status ?? "—",
-            formatCurrency(s.totalAmount),
+            formatCurrency(Number(s.totalAmount)),
           ]),
           headStyles: { fillColor: VIO as [number, number, number], textColor: [255,255,255], fontStyle: "bold", fontSize: 8 },
           bodyStyles: { fontSize: 7, textColor: [30,30,30] },
@@ -375,7 +375,7 @@ export function ReportsClient({ vendorName }: { vendorName: string }) {
                         </div>
                         <div className="flex items-center gap-3 text-xs text-muted-foreground">
                           <span>{p.totalQty} sold</span>
-                          <span className="font-medium text-foreground">{formatCurrency(p.totalRevenue)}</span>
+                          <span className="font-medium text-foreground">{formatCurrency(Number(p.totalRevenue))}</span>
                         </div>
                       </div>
                       <div className="h-1.5 bg-muted overflow-hidden">
@@ -401,7 +401,7 @@ export function ReportsClient({ vendorName }: { vendorName: string }) {
                       <p className="text-sm font-medium">{d.date}</p>
                       <p className="text-xs text-muted-foreground">{d.totalCount} sale{d.totalCount !== 1 ? "s" : ""}</p>
                     </div>
-                    <span className="text-sm font-medium">{formatCurrency(d.totalRevenue)}</span>
+                    <span className="text-sm font-medium">{formatCurrency(Number(d.totalRevenue))}</span>
                   </div>
                 ))}
               </div>
@@ -434,7 +434,7 @@ export function ReportsClient({ vendorName }: { vendorName: string }) {
                       <td className="p-3">
                         <Badge variant={s.status === "completed" ? "success" : "secondary"} className="text-[10px] capitalize">{s.status}</Badge>
                       </td>
-                      <td className="p-3 text-right font-medium">{formatCurrency(s.totalAmount)}</td>
+                      <td className="p-3 text-right font-medium">{formatCurrency(Number(s.totalAmount))}</td>
                     </tr>
                   ))}
                   {data.sales.length > 50 && (

@@ -1,5 +1,5 @@
 "use client";
-import { UserButton } from "@clerk/nextjs";
+import { UserMenu } from "./user-menu";
 import { Moon, Sun, Monitor, Download } from "lucide-react";
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { toast } from "sonner";
@@ -57,16 +57,6 @@ export function Header() {
     localStorage.setItem("theme", next);
   };
 
-  const userButtonAppearance = useMemo(() => ({
-    elements: {
-      avatarBox: "w-8 h-8",
-      userButtonPopoverCard: "bg-background border border-border shadow-md",
-      userButtonPopoverActionButton: "font-mono text-sm rounded-none hover:bg-accent",
-    },
-  }), []);
-
-
-
   const getIcon = () => {
     if (theme === "system") return <Monitor className="h-4 w-4" />;
     return theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />;
@@ -99,7 +89,7 @@ export function Header() {
         >
           {getIcon()}
         </button>
-        <UserButton appearance={userButtonAppearance} />
+        <UserMenu />
       </div>
     </header>
   );

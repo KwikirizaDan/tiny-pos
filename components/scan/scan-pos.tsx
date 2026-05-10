@@ -6,7 +6,7 @@ import {
   Banknote, ScanLine, X, Zap, Camera, CheckCircle2,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
-import type { Product, Category, Vendor } from "@/db/schema";
+import type { Product, Category, Vendor } from "@/types/pos";
 
 interface CartItem { product: Product; quantity: number; }
 
@@ -273,8 +273,8 @@ export function ScanPOS({
             {/* Idle state — big start button */}
             {cameraState === "idle" && (
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-6 bg-zinc-950">
-                <div className="w-20 h-20 rounded-full bg-violet-600/20 border-2 border-violet-500/50 flex items-center justify-center">
-                  <Camera className="h-9 w-9 text-violet-400" />
+                <div className="w-20 h-20 rounded-full bg-primary/20 border-2 border-primary/50 flex items-center justify-center">
+                  <Camera className="h-9 w-9 text-primary" />
                 </div>
                 <div className="text-center px-6">
                   <p className="text-white font-medium text-lg mb-1">Scan to Sell</p>
@@ -282,7 +282,7 @@ export function ScanPOS({
                 </div>
                 <button
                   onClick={startCamera}
-                  className="px-8 py-4 bg-violet-600 text-white font-medium text-base active:bg-violet-700 touch-manipulation"
+                  className="px-8 py-4 bg-primary text-white font-medium text-base active:bg-primary/90 touch-manipulation"
                 >
                   Start Camera
                 </button>
@@ -292,7 +292,7 @@ export function ScanPOS({
             {/* Starting state */}
             {cameraState === "starting" && (
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-zinc-950">
-                <div className="w-12 h-12 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" />
+                <div className="w-12 h-12 border-2 border-primary border-t-transparent rounded-full animate-spin" />
                 <p className="text-zinc-400 text-sm font-mono">Starting camera…</p>
               </div>
             )}
@@ -302,10 +302,10 @@ export function ScanPOS({
               <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                 <div className="absolute inset-0 bg-black/30" />
                 <div className={`relative w-64 h-64 transition-transform duration-200 ${flash ? "scale-110" : "scale-100"}`}>
-                  <div className="absolute top-0 left-0 w-10 h-10 border-t-[3px] border-l-[3px] border-violet-400" />
-                  <div className="absolute top-0 right-0 w-10 h-10 border-t-[3px] border-r-[3px] border-violet-400" />
-                  <div className="absolute bottom-0 left-0 w-10 h-10 border-b-[3px] border-l-[3px] border-violet-400" />
-                  <div className="absolute bottom-0 right-0 w-10 h-10 border-b-[3px] border-r-[3px] border-violet-400" />
+                  <div className="absolute top-0 left-0 w-10 h-10 border-t-[3px] border-l-[3px] border-primary" />
+                  <div className="absolute top-0 right-0 w-10 h-10 border-t-[3px] border-r-[3px] border-primary" />
+                  <div className="absolute bottom-0 left-0 w-10 h-10 border-b-[3px] border-l-[3px] border-primary" />
+                  <div className="absolute bottom-0 right-0 w-10 h-10 border-b-[3px] border-r-[3px] border-primary" />
                   <div className="absolute inset-x-4 top-1/2 h-0.5 bg-violet-400/80 animate-pulse" />
                 </div>
                 <p className="mt-4 text-white/60 text-xs font-mono relative z-10">
@@ -325,7 +325,7 @@ export function ScanPOS({
                 </p>
                 <button
                   onClick={startCamera}
-                  className="px-6 py-3 bg-violet-600 text-white text-sm font-mono active:bg-violet-700 touch-manipulation"
+                  className="px-6 py-3 bg-primary text-white text-sm font-mono active:bg-primary/90 touch-manipulation"
                 >
                   Try again
                 </button>
@@ -345,12 +345,12 @@ export function ScanPOS({
             {/* Last scanned product */}
             {lastProduct && cameraState === "active" && (
               <div className="absolute bottom-0 left-0 right-0 bg-zinc-900/95 border-t border-zinc-800 p-3 flex items-center gap-3">
-                <div className="w-9 h-9 bg-violet-600/20 border border-violet-600/30 flex items-center justify-center shrink-0">
-                  <Zap className="h-4 w-4 text-violet-400" />
+                <div className="w-9 h-9 bg-primary/20 border border-primary/30 flex items-center justify-center shrink-0">
+                  <Zap className="h-4 w-4 text-primary" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-white truncate">{lastProduct.name}</p>
-                  <p className="text-xs text-violet-400">{formatCurrency(lastProduct.price)}</p>
+                  <p className="text-xs text-primary">{formatCurrency(Number(lastProduct.price))}</p>
                 </div>
                 <span className="text-xs text-zinc-500">added ✓</span>
               </div>
@@ -537,7 +537,7 @@ export function ScanPOS({
               setView(v);
             }}
             className={`flex-1 flex flex-col items-center justify-center gap-1 py-3 transition-colors touch-manipulation ${
-              view === v ? "text-violet-400" : "text-zinc-500"
+              view === v ? "text-primary" : "text-zinc-500"
             }`}
           >
             <Icon className={`h-5 w-5 ${view === v ? "stroke-[2.5px]" : ""}`} />

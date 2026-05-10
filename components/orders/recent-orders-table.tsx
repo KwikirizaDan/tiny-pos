@@ -1,7 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import type { Sale } from "@/db/schema";
+import type { Sale } from "@/types/pos";
 
 const statusVariant: Record<string, "success" | "warning" | "destructive" | "secondary"> = {
   completed: "success", pending: "warning", refunded: "secondary", cancelled: "destructive",
@@ -39,7 +39,7 @@ export function RecentOrdersTable({ orders }: { orders: Sale[] }) {
                 </Badge>
               </TableCell>
               <TableCell className="text-xs capitalize">{order.paymentMethod}</TableCell>
-              <TableCell className="text-right font-medium text-sm">{formatCurrency(order.totalAmount)}</TableCell>
+              <TableCell className="text-right font-medium text-sm">{formatCurrency(Number(order.totalAmount))}</TableCell>
             </TableRow>
           ))}
         </TableBody>

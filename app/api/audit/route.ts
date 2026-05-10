@@ -1,21 +1,26 @@
-import { auth } from "@clerk/nextjs/server";
+import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
-import { getDb, auditLogs, vendors } from "@/db";
-import { eq, desc } from "drizzle-orm";
-
-async function getVendorId(clerkId: string) {
-  const db = getDb();
-  const [v] = await db.select().from(vendors).where(eq(vendors.ownerClerkId, clerkId));
-  return v?.id ?? null;
-}
 
 export async function GET() {
-  const { userId } = await auth();
-  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const vendorId = await getVendorId(userId);
-  if (!vendorId) return NextResponse.json({ error: "Vendor not found" }, { status: 404 });
-  const db = getDb();
-  const data = await db.select().from(auditLogs)
-    .where(eq(auditLogs.vendorId, vendorId)).orderBy(desc(auditLogs.createdAt)).limit(200);
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const { data: vendor } = await supabase
+    .from('vendors')
+    .select('id')
+    .eq('owner_id', user.id)
+    .single();
+
+  if (!vendor) return NextResponse.json({ error: "Vendor not found" }, { status: 404 });
+
+  const { data, error } = await supabase
+    .from('audit_logs')
+    .select('*')
+    .eq('vendor_id', vendor.id)
+    .order('created_at', { ascending: false })
+    .limit(200);
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json(data);
 }

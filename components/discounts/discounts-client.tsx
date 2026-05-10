@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { DiscountDialog } from "./discount-dialog";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import type { Discount } from "@/db/schema";
+import type { Discount } from "@/types/pos";
 
 export function DiscountsClient({ discounts: init }: { discounts: Discount[] }) {
   const [discounts, setDiscounts] = useState(init);
@@ -74,12 +74,12 @@ export function DiscountsClient({ discounts: init }: { discounts: Discount[] }) 
               </div>
               <div className="grid grid-cols-2 gap-2 text-xs">
                 <div><span className="text-muted-foreground">Type</span><p className="font-medium capitalize">{d.discountType}</p></div>
-                <div><span className="text-muted-foreground">Value</span><p className="font-medium">{d.discountType === "percentage" ? `${d.value}%` : formatCurrency(d.value)}</p></div>
+                <div><span className="text-muted-foreground">Value</span><p className="font-medium">{d.discountType === "percentage" ? `${d.value}%` : formatCurrency(Number(d.value))}</p></div>
                 <div><span className="text-muted-foreground">Uses</span><p className="font-medium">{d.usesCount ?? 0}{d.maxUses ? ` / ${d.maxUses}` : ""}</p></div>
                 <div><span className="text-muted-foreground">Expires</span><p className="font-medium">{d.expiresAt ? new Date(d.expiresAt).toLocaleDateString() : "Never"}</p></div>
               </div>
               {d.minOrderAmount && (
-                <p className="text-[10px] text-muted-foreground">Min order: {formatCurrency(d.minOrderAmount)}</p>
+                <p className="text-[10px] text-muted-foreground">Min order: {formatCurrency(Number(d.minOrderAmount))}</p>
               )}
             </div>
           ))}

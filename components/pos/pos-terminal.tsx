@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/lib/utils";
-import type { Product, Category, Vendor, Sale } from "@/db/schema";
+import type { Product, Category, Vendor, Sale } from "@/types/pos";
 import { createOrder } from "@/app/(dashboard)/orders/actions";
 import { openDB, syncToIDB, getFromIDB, addPendingSale, getPendingSales, clearPendingSale } from "@/lib/idb";
 
@@ -171,7 +171,7 @@ ${Number(sale.taxAmount) > 0 ? `<div class="row"><span>Tax</span><span>${formatU
         productId: i.product.id,
         productName: i.product.name,
         quantity: i.quantity,
-        unitPrice: i.product.price,
+        unitPrice: String(i.product.price),
       })),
       paymentMethod,
     };
@@ -269,7 +269,7 @@ ${Number(sale.taxAmount) > 0 ? `<div class="row"><span>Tax</span><span>${formatU
                       </span>
                     )}
                     <p className="font-medium text-sm leading-tight line-clamp-2 mb-2 pr-5">{product.name}</p>
-                    <p className="text-primary text-sm font-medium">{formatCurrency(product.price)}</p>
+                    <p className="text-primary text-sm font-medium">{formatCurrency(Number(product.price))}</p>
                     <p className="text-[10px] text-muted-foreground mt-0.5">{product.stockQuantity} left</p>
                   </button>
                 );

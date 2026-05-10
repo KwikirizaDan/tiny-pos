@@ -14,7 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { ProductDialog } from "./product-dialog";
 import { formatCurrency } from "@/lib/utils";
-import type { Product, Category } from "@/db/schema";
+import type { Product, Category } from "@/types/pos";
 import { deleteProduct } from "@/app/(dashboard)/products/actions";
 
 const col = createColumnHelper<Product>();
@@ -94,7 +94,7 @@ export function ProductsClient({
           Price <ArrowUpDown className="h-3 w-3" />
         </button>
       ),
-      cell: (info) => <span className="font-medium">{formatCurrency(info.getValue())}</span>,
+      cell: (info) => <span className="font-medium">{formatCurrency(Number(info.getValue()))}</span>,
     }),
     col.accessor("stockQuantity", {
       header: () => <span className="text-xs uppercase tracking-widest text-muted-foreground">Stock</span>,

@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
-import { ClerkProvider } from "@clerk/nextjs";
 import { Toaster } from "sonner";
-import { shadcn} from "@clerk/themes";
 import "./globals.css";
+import { IBM_Plex_Sans } from "next/font/google";
+import { cn } from "@/lib/utils";
+
+const ibmPlexSans = IBM_Plex_Sans({subsets:['latin'],variable:'--font-sans'});
 
 export const metadata: Metadata = {
   title: "TinyPOS",
@@ -33,9 +35,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" suppressHydrationWarning>
-    <body suppressHydrationWarning>
-   <ClerkProvider appearance={shadcn}>
+    <html lang="en" suppressHydrationWarning className={cn("font-sans", ibmPlexSans.variable)}>
+      <body suppressHydrationWarning>
           <script
             dangerouslySetInnerHTML={{
               __html: `
@@ -61,7 +62,9 @@ export default function RootLayout({
               `,
             }}
           />
-          {children}
+          <div className="min-h-screen">
+            {children}
+          </div>
 
           <Toaster
             position="top-right"
@@ -74,7 +77,6 @@ export default function RootLayout({
               },
             }}
           />
-        </ClerkProvider>
       </body>
     </html>
   );

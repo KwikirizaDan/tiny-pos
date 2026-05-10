@@ -1,7 +1,5 @@
-import { auth } from "@clerk/nextjs/server";
+import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
-import { getDb, users, vendors } from "@/db";
-import { eq, and } from "drizzle-orm";
 import { z } from "zod";
 
 const schema = z.object({
@@ -10,35 +8,60 @@ const schema = z.object({
   isActive: z.boolean().optional(),
 });
 
-async function getVendorId(clerkId: string) {
-  const db = getDb();
-  const [v] = await db.select().from(vendors).where(eq(vendors.ownerClerkId, clerkId));
-  return v?.id ?? null;
+async function getVendorFromAuthId(supabase: any, authId: string) {
+  const { data: vendor } = await supabase
+    .from('vendors')
+    .select('*')
+    .eq('owner_id', authId)
+    .single();
+  return vendor ?? null;
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const { userId } = await auth();
-  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
   const { id } = await params;
   const body = await req.json();
   const parsed = schema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: parsed.error.issues }, { status: 400 });
-  const vendorId = await getVendorId(userId);
-  if (!vendorId) return NextResponse.json({ error: "Vendor not found" }, { status: 404 });
-  const db = getDb();
-  const [updated] = await db.update(users).set({ ...parsed.data, updatedAt: new Date() })
-    .where(and(eq(users.id, id), eq(users.vendorId, vendorId))).returning();
-  if (!updated) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  const vendor = await getVendorFromAuthId(supabase, user.id);
+  if (!vendor) return NextResponse.json({ error: "Vendor not found" }, { status: 404 });
+
+  const { data: updated, error } = await supabase
+    .from('users')
+    .update({
+      name: parsed.data.name,
+      role: parsed.data.role,
+      is_active: parsed.data.isActive,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', id)
+    .eq('vendor_id', vendor.id)
+    .select()
+    .single();
+
+  if (error || !updated) return NextResponse.json({ error: error?.message || "Not found" }, { status: 404 });
   return NextResponse.json(updated);
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const { userId } = await auth();
-  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
   const { id } = await params;
-  const vendorId = await getVendorId(userId);
-  if (!vendorId) return NextResponse.json({ error: "Vendor not found" }, { status: 404 });
-  const db = getDb();
-  await db.delete(users).where(and(eq(users.id, id), eq(users.vendorId, vendorId)));
+  const vendor = await getVendorFromAuthId(supabase, user.id);
+  if (!vendor) return NextResponse.json({ error: "Vendor not found" }, { status: 404 });
+
+  const { error } = await supabase
+    .from('users')
+    .delete()
+    .eq('id', id)
+    .eq('vendor_id', vendor.id);
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ success: true });
 }

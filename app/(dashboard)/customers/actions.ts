@@ -1,8 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getDb, customers } from "@/db";
-import { eq, and } from "drizzle-orm";
+import { createClient } from "@/lib/supabase/server";
 import { getVendor } from "@/lib/vendor";
 import { z } from "zod";
 
@@ -17,15 +16,22 @@ const customerSchema = z.object({
 export async function createCustomer(data: z.infer<typeof customerSchema>) {
   const vendor = await getVendor();
   const parsed = customerSchema.parse(data);
+  const supabase = await createClient();
 
-  const db = getDb();
-  const [customer] = await db
-    .insert(customers)
-    .values({
-      ...parsed,
-      vendorId: vendor.id,
+  const { data: customer, error } = await supabase
+    .from("customers")
+    .insert({
+      name: parsed.name,
+      phone: parsed.phone,
+      email: parsed.email,
+      notes: parsed.notes,
+      loyalty_points: parsed.loyaltyPoints,
+      vendor_id: vendor.id,
     })
-    .returning();
+    .select()
+    .single();
+
+  if (error) throw new Error(error.message);
 
   revalidatePath("/customers");
   return customer;
@@ -33,18 +39,27 @@ export async function createCustomer(data: z.infer<typeof customerSchema>) {
 
 export async function updateCustomer(id: string, data: Partial<z.infer<typeof customerSchema>>) {
   const vendor = await getVendor();
-  const db = getDb();
+  const supabase = await createClient();
 
-  const [customer] = await db
-    .update(customers)
-    .set({
-      ...data,
-      updatedAt: new Date(),
-    })
-    .where(and(eq(customers.id, id), eq(customers.vendorId, vendor.id)))
-    .returning();
+  const updateData: any = {
+    updated_at: new Date().toISOString(),
+  };
 
-  if (!customer) throw new Error("Customer not found");
+  if (data.name !== undefined) updateData.name = data.name;
+  if (data.phone !== undefined) updateData.phone = data.phone;
+  if (data.email !== undefined) updateData.email = data.email;
+  if (data.notes !== undefined) updateData.notes = data.notes;
+  if (data.loyaltyPoints !== undefined) updateData.loyalty_points = data.loyaltyPoints;
+
+  const { data: customer, error } = await supabase
+    .from("customers")
+    .update(updateData)
+    .eq("id", id)
+    .eq("vendor_id", vendor.id)
+    .select()
+    .single();
+
+  if (error) throw new Error(error.message);
 
   revalidatePath("/customers");
   return customer;
@@ -52,11 +67,15 @@ export async function updateCustomer(id: string, data: Partial<z.infer<typeof cu
 
 export async function deleteCustomer(id: string) {
   const vendor = await getVendor();
-  const db = getDb();
+  const supabase = await createClient();
 
-  await db
-    .delete(customers)
-    .where(and(eq(customers.id, id), eq(customers.vendorId, vendor.id)));
+  const { error } = await supabase
+    .from("customers")
+    .delete()
+    .eq("id", id)
+    .eq("vendor_id", vendor.id);
+
+  if (error) throw new Error(error.message);
 
   revalidatePath("/customers");
   return { success: true };

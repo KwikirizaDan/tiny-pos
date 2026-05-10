@@ -1,8 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getDb, refunds, sales } from "@/db";
-import { eq, and } from "drizzle-orm";
+import { createClient } from "@/lib/supabase/server";
 import { getVendor } from "@/lib/vendor";
 import { z } from "zod";
 
@@ -15,42 +14,52 @@ const refundSchema = z.object({
 export async function createRefund(data: z.infer<typeof refundSchema>) {
   const vendor = await getVendor();
   const parsed = refundSchema.parse(data);
-
-  const db = getDb();
+  const supabase = await createClient();
 
   // Verify sale belongs to this vendor
-  const [sale] = await db
-    .select()
-    .from(sales)
-    .where(and(eq(sales.id, parsed.saleId), eq(sales.vendorId, vendor.id)));
+  const { data: sale, error: saleError } = await supabase
+    .from("sales")
+    .select("*")
+    .eq("id", parsed.saleId)
+    .eq("vendor_id", vendor.id)
+    .single();
 
-  if (!sale) throw new Error("Sale not found");
+  if (saleError || !sale) throw new Error("Sale not found");
   if (sale.status === "refunded") throw new Error("Already refunded");
 
-  const refund = await db.transaction(async (tx) => {
-    const [refund] = await tx
-      .insert(refunds)
-      .values({
-        ...parsed,
-        vendorId: vendor.id,
+  try {
+    const { data: refund, error: refundError } = await supabase
+      .from("refunds")
+      .insert({
+        sale_id: parsed.saleId,
+        amount: parsed.amount,
+        reason: parsed.reason,
+        vendor_id: vendor.id,
         status: "processed",
       })
-      .returning();
+      .select()
+      .single();
 
-    await tx
-      .update(sales)
-      .set({
+    if (refundError || !refund) throw new Error(refundError?.message || "Failed to create refund");
+
+    const { error: updateError } = await supabase
+      .from("sales")
+      .update({
         status: "refunded",
-        updatedAt: new Date(),
+        updated_at: new Date().toISOString(),
       })
-      .where(and(eq(sales.id, parsed.saleId), eq(sales.vendorId, vendor.id)));
+      .eq("id", parsed.saleId)
+      .eq("vendor_id", vendor.id);
+
+    if (updateError) throw new Error(updateError.message);
+
+    revalidatePath("/refunds");
+    revalidatePath("/orders");
+    revalidatePath("/dashboard");
 
     return refund;
-  });
-
-  revalidatePath("/refunds");
-  revalidatePath("/orders");
-  revalidatePath("/dashboard");
-
-  return refund;
+  } catch (error: any) {
+    console.error("Refund error:", error);
+    throw new Error(error.message ?? "Something went wrong. Please try again.");
+  }
 }

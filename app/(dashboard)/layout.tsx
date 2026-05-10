@@ -1,4 +1,4 @@
-import { getVendor } from "@/lib/vendor";
+import { getVendor, getVendorUser } from "@/lib/vendor";
 import { DashboardLayoutClient } from "@/components/layout/dashboard-layout-client";
 
 export default async function DashboardLayout({
@@ -6,8 +6,9 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  // Ensure user has a vendor, otherwise they get redirected to onboarding
   await getVendor();
+  const vendorUser = await getVendorUser();
+  const userRole = (vendorUser?.role ?? "owner") as "owner" | "manager" | "cashier";
 
-  return <DashboardLayoutClient>{children}</DashboardLayoutClient>;
+  return <DashboardLayoutClient userRole={userRole}>{children}</DashboardLayoutClient>;
 }

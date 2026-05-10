@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import type { Refund, Sale } from "@/db/schema";
+import type { Refund, Sale } from "@/types/pos";
 import { createRefund } from "@/app/(dashboard)/refunds/actions";
 
 interface Props {
@@ -46,12 +46,12 @@ export function RefundDialog({ open, onOpenChange, sales, onSave }: Props) {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1.5">
             <Label>Select sale *</Label>
-            <Select value={form.saleId} onValueChange={(v) => { const s = sales.find((x) => x.id === v); setForm({ ...form, saleId: v, amount: s ? s.totalAmount : "" }); }}>
+            <Select value={form.saleId} onValueChange={(v) => { const s = sales.find((x) => x.id === v); setForm({ ...form, saleId: v ?? form.saleId, amount: s ? String(s.totalAmount) : "" }); }}>
               <SelectTrigger><SelectValue placeholder="Select a completed sale" /></SelectTrigger>
               <SelectContent>
                 {sales.filter((s) => s.status === "completed").map((s) => (
                   <SelectItem key={s.id} value={s.id}>
-                    {s.id.slice(0, 8).toUpperCase()} · {formatCurrency(s.totalAmount)} · {formatDate(s.createdAt!)}
+                    {s.id.slice(0, 8).toUpperCase()} · {formatCurrency(Number(s.totalAmount))} · {formatDate(s.createdAt!)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -59,7 +59,7 @@ export function RefundDialog({ open, onOpenChange, sales, onSave }: Props) {
           </div>
           {selectedSale && (
             <div className="border p-3 text-xs space-y-1">
-              <div className="flex justify-between"><span className="text-muted-foreground">Sale total</span><span className="font-medium">{formatCurrency(selectedSale.totalAmount)}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Sale total</span><span className="font-medium">{formatCurrency(Number(selectedSale.totalAmount))}</span></div>
               <div className="flex justify-between"><span className="text-muted-foreground">Payment</span><span className="capitalize">{selectedSale.paymentMethod}</span></div>
             </div>
           )}

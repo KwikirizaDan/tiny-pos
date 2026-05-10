@@ -1,8 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getDb, users } from "@/db";
-import { eq, and } from "drizzle-orm";
+import { createClient } from "@/lib/supabase/server";
 import { getVendor } from "@/lib/vendor";
 import { z } from "zod";
 
@@ -16,17 +15,32 @@ const staffSchema = z.object({
 export async function createStaff(data: z.infer<typeof staffSchema>) {
   const vendor = await getVendor();
   const parsed = staffSchema.parse(data);
+  const supabase = await createClient();
 
-  const db = getDb();
-  const [staff] = await db
-    .insert(users)
-    .values({
-      ...parsed,
-      vendorId: vendor.id,
-      clerkId: `pending_${Date.now()}`,
-      isActive: true,
+  // Check if user already exists in this vendor
+  const { data: existing } = await supabase
+    .from("users")
+    .select("id")
+    .eq("email", parsed.email)
+    .eq("vendor_id", vendor.id)
+    .single();
+
+  if (existing) throw new Error("A user with this email already exists in your team.");
+
+  const { data: staff, error } = await supabase
+    .from("users")
+    .insert({
+      email: parsed.email,
+      name: parsed.name,
+      role: parsed.role,
+      vendor_id: vendor.id,
+      auth_id: crypto.randomUUID(), // This is a placeholder until they link via Auth
+      is_active: true,
     })
-    .returning();
+    .select()
+    .single();
+
+  if (error) throw new Error(error.message);
 
   revalidatePath("/staff");
   return staff;
@@ -34,18 +48,26 @@ export async function createStaff(data: z.infer<typeof staffSchema>) {
 
 export async function updateStaff(id: string, data: Partial<z.infer<typeof staffSchema>>) {
   const vendor = await getVendor();
-  const db = getDb();
+  const supabase = await createClient();
 
-  const [staff] = await db
-    .update(users)
-    .set({
-      ...data,
-      updatedAt: new Date(),
-    })
-    .where(and(eq(users.id, id), eq(users.vendorId, vendor.id)))
-    .returning();
+  const updateData: any = {
+    updated_at: new Date().toISOString(),
+  };
 
-  if (!staff) throw new Error("Staff member not found");
+  if (data.email !== undefined) updateData.email = data.email;
+  if (data.name !== undefined) updateData.name = data.name;
+  if (data.role !== undefined) updateData.role = data.role;
+  if (data.isActive !== undefined) updateData.is_active = data.isActive;
+
+  const { data: staff, error } = await supabase
+    .from("users")
+    .update(updateData)
+    .eq("id", id)
+    .eq("vendor_id", vendor.id)
+    .select()
+    .single();
+
+  if (error) throw new Error(error.message);
 
   revalidatePath("/staff");
   return staff;
@@ -53,11 +75,15 @@ export async function updateStaff(id: string, data: Partial<z.infer<typeof staff
 
 export async function deleteStaff(id: string) {
   const vendor = await getVendor();
-  const db = getDb();
+  const supabase = await createClient();
 
-  await db
-    .delete(users)
-    .where(and(eq(users.id, id), eq(users.vendorId, vendor.id)));
+  const { error } = await supabase
+    .from("users")
+    .delete()
+    .eq("id", id)
+    .eq("vendor_id", vendor.id);
+
+  if (error) throw new Error(error.message);
 
   revalidatePath("/staff");
   return { success: true };

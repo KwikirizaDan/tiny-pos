@@ -1,7 +1,9 @@
+import { requireRole } from "@/lib/require-role";
 import { getVendor } from "@/lib/vendor";
 import { ReportsClient } from "@/components/reports/reports-client";
 
 export default async function ReportsPage() {
+  await requireRole("reports.view");
   const vendor = await getVendor();
   return (
     <div className="space-y-6">

@@ -1,7 +1,5 @@
-import { auth } from "@clerk/nextjs/server";
+import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
-import { getDb, inventoryLogs, products, vendors } from "@/db";
-import { eq, desc, sql } from "drizzle-orm";
 import { z } from "zod";
 
 const schema = z.object({
@@ -11,43 +9,80 @@ const schema = z.object({
   notes: z.string().optional(),
 });
 
-async function getVendorId(clerkId: string) {
-  const db = getDb();
-  const [v] = await db.select().from(vendors).where(eq(vendors.ownerClerkId, clerkId));
-  return v?.id ?? null;
-}
-
 export async function GET() {
-  const { userId } = await auth();
-  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const vendorId = await getVendorId(userId);
-  if (!vendorId) return NextResponse.json({ error: "Vendor not found" }, { status: 404 });
-  const db = getDb();
-  const data = await db.select().from(inventoryLogs)
-    .where(eq(inventoryLogs.vendorId, vendorId)).orderBy(desc(inventoryLogs.createdAt)).limit(200);
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const { data: vendor } = await supabase
+    .from('vendors')
+    .select('id')
+    .eq('owner_id', user.id)
+    .single();
+
+  if (!vendor) return NextResponse.json({ error: "Vendor not found" }, { status: 404 });
+
+  const { data, error } = await supabase
+    .from('inventory_logs')
+    .select('*')
+    .eq('vendor_id', vendor.id)
+    .order('created_at', { ascending: false })
+    .limit(200);
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json(data);
 }
 
 export async function POST(req: NextRequest) {
-  const { userId } = await auth();
-  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
   const body = await req.json();
   const parsed = schema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: parsed.error.issues }, { status: 400 });
-  const vendorId = await getVendorId(userId);
-  if (!vendorId) return NextResponse.json({ error: "Vendor not found" }, { status: 404 });
-  const db = getDb();
-  const [product] = await db.select().from(products).where(eq(products.id, parsed.data.productId));
-  if (!product) return NextResponse.json({ error: "Product not found" }, { status: 404 });
-  const before = product.stockQuantity ?? 0;
+
+  const { data: vendor } = await supabase
+    .from('vendors')
+    .select('id')
+    .eq('owner_id', user.id)
+    .single();
+
+  if (!vendor) return NextResponse.json({ error: "Vendor not found" }, { status: 404 });
+
+  const { data: product, error: productError } = await supabase
+    .from('products')
+    .select('stock_quantity')
+    .eq('id', parsed.data.productId)
+    .eq('vendor_id', vendor.id)
+    .single();
+
+  if (productError || !product) return NextResponse.json({ error: "Product not found" }, { status: 404 });
+
+  const before = product.stock_quantity ?? 0;
   const after = before + parsed.data.quantityChange;
-  const [log] = await db.insert(inventoryLogs).values({
-    ...parsed.data,
-    vendorId,
-    quantityBefore: before,
-    quantityAfter: after,
-  }).returning();
-  await db.update(products).set({ stockQuantity: after, updatedAt: new Date() })
-    .where(eq(products.id, parsed.data.productId));
+
+  const { data: log, error: logError } = await supabase
+    .from('inventory_logs')
+    .insert({
+      product_id: parsed.data.productId,
+      vendor_id: vendor.id,
+      change_type: parsed.data.changeType,
+      quantity_change: parsed.data.quantityChange,
+      quantity_before: before,
+      quantity_after: after,
+      notes: parsed.data.notes,
+    })
+    .select()
+    .single();
+
+  if (logError) return NextResponse.json({ error: logError.message }, { status: 500 });
+
+  await supabase
+    .from('products')
+    .update({ stock_quantity: after, updated_at: new Date().toISOString() })
+    .eq('id', parsed.data.productId)
+    .eq('vendor_id', vendor.id);
+
   return NextResponse.json(log, { status: 201 });
 }

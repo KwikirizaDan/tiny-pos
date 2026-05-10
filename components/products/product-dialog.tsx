@@ -6,8 +6,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import type { Product, Category } from "@/db/schema";
+import type { Product, Category } from "@/types/pos";
 import { createProduct, updateProduct } from "@/app/(dashboard)/products/actions";
+import { uploadProductImage } from "@/lib/supabase/storage";
+import { ImagePlus } from "lucide-react";
 
 interface ProductDialogProps {
   open: boolean;
@@ -20,6 +22,8 @@ interface ProductDialogProps {
 
 export function ProductDialog({ open, onOpenChange, product, categories, vendorId, onSave }: ProductDialogProps) {
   const [loading, setLoading] = useState(false);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [form, setForm] = useState({
     name: "",
     description: "",
@@ -37,23 +41,43 @@ export function ProductDialog({ open, onOpenChange, product, categories, vendorI
       setForm({
         name: product.name,
         description: product.description ?? "",
-        price: product.price,
-        costPrice: product.costPrice ?? "",
+        price: String(product.price),
+        costPrice: product.costPrice ? String(product.costPrice) : "",
         stockQuantity: String(product.stockQuantity ?? 0),
         lowStockAlert: String(product.lowStockAlert ?? 5),
         categoryId: product.categoryId ?? "none",
         sku: product.sku ?? "",
         isActive: product.isActive ?? true,
       });
+      setImagePreview(product.imageUrl);
     } else {
       setForm({ name: "", description: "", price: "", costPrice: "", stockQuantity: "0", lowStockAlert: "5", categoryId: "none", sku: "", isActive: true });
+      setImagePreview(null);
     }
+    setImageFile(null);
   }, [product, open]);
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
+      let imageUrl = product?.imageUrl || null;
+      if (imageFile) {
+        imageUrl = await uploadProductImage(imageFile);
+      }
+
       const payload = {
         ...form,
         stockQuantity: Number(form.stockQuantity),
@@ -62,6 +86,7 @@ export function ProductDialog({ open, onOpenChange, product, categories, vendorI
         costPrice: form.costPrice === "" ? null : form.costPrice,
         description: form.description || null,
         sku: form.sku || null,
+        imageUrl,
       };
 
       const saved = product
@@ -80,11 +105,28 @@ export function ProductDialog({ open, onOpenChange, product, categories, vendorI
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg overflow-y-auto max-h-[90vh]">
         <DialogHeader>
           <DialogTitle>{product ? "Edit product" : "Add product"}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="flex flex-col items-center gap-4 py-2">
+            <div className="relative h-24 w-24 rounded-lg border-2 border-dashed flex items-center justify-center overflow-hidden bg-muted">
+              {imagePreview ? (
+                <img src={imagePreview} alt="Preview" className="h-full w-full object-cover" />
+              ) : (
+                <ImagePlus className="h-8 w-8 text-muted-foreground" />
+              )}
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleImageChange}
+                className="absolute inset-0 opacity-0 cursor-pointer"
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">Click to upload product image</p>
+          </div>
+
           <div className="grid grid-cols-2 gap-3">
             <div className="col-span-2 space-y-1.5">
               <Label htmlFor="name">Name *</Label>
@@ -122,7 +164,7 @@ export function ProductDialog({ open, onOpenChange, product, categories, vendorI
 
             <div className="space-y-1.5">
               <Label>Category</Label>
-              <Select value={form.categoryId} onValueChange={(v) => setForm({ ...form, categoryId: v })}>
+              <Select value={form.categoryId} onValueChange={(v) => setForm({ ...form, categoryId: v ?? form.categoryId })}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select category" />
                 </SelectTrigger>

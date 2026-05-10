@@ -1,8 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getDb, vendorSettings } from "@/db";
-import { eq, and } from "drizzle-orm";
+import { createClient } from "@/lib/supabase/server";
 import { getVendor } from "@/lib/vendor";
 import { z } from "zod";
 
@@ -14,26 +13,38 @@ const settingSchema = z.object({
 export async function updateSetting(data: z.infer<typeof settingSchema>) {
   const vendor = await getVendor();
   const parsed = settingSchema.parse(data);
+  const supabase = await createClient();
 
-  const db = getDb();
-  const [existing] = await db
-    .select()
-    .from(vendorSettings)
-    .where(and(eq(vendorSettings.vendorId, vendor.id), eq(vendorSettings.key, parsed.key)));
+  const { data: existing, error: fetchError } = await supabase
+    .from("vendor_settings")
+    .select("*")
+    .eq("vendor_id", vendor.id)
+    .eq("key", parsed.key)
+    .maybeSingle();
+
+  if (fetchError) throw new Error(fetchError.message);
 
   if (existing) {
-    await db
-      .update(vendorSettings)
-      .set({
+    const { error: updateError } = await supabase
+      .from("vendor_settings")
+      .update({
         value: parsed.value,
-        updatedAt: new Date(),
+        updated_at: new Date().toISOString(),
       })
-      .where(and(eq(vendorSettings.vendorId, vendor.id), eq(vendorSettings.key, parsed.key)));
+      .eq("vendor_id", vendor.id)
+      .eq("key", parsed.key);
+      
+    if (updateError) throw new Error(updateError.message);
   } else {
-    await db.insert(vendorSettings).values({
-      ...parsed,
-      vendorId: vendor.id,
-    });
+    const { error: insertError } = await supabase
+      .from("vendor_settings")
+      .insert({
+        vendor_id: vendor.id,
+        key: parsed.key,
+        value: parsed.value,
+      });
+      
+    if (insertError) throw new Error(insertError.message);
   }
 
   revalidatePath("/settings");
@@ -41,32 +52,39 @@ export async function updateSetting(data: z.infer<typeof settingSchema>) {
 }
 
 export async function updateMultipleSettings(settings: Record<string, string>) {
-    const vendor = await getVendor();
-    const db = getDb();
+  const vendor = await getVendor();
+  const supabase = await createClient();
 
-    for (const [key, value] of Object.entries(settings)) {
-        const [existing] = await db
-            .select()
-            .from(vendorSettings)
-            .where(and(eq(vendorSettings.vendorId, vendor.id), eq(vendorSettings.key, key)));
+  for (const [key, value] of Object.entries(settings)) {
+    const { data: existing, error: fetchError } = await supabase
+      .from("vendor_settings")
+      .select("*")
+      .eq("vendor_id", vendor.id)
+      .eq("key", key)
+      .maybeSingle();
 
-        if (existing) {
-            await db
-                .update(vendorSettings)
-                .set({
-                    value,
-                    updatedAt: new Date(),
-                })
-                .where(and(eq(vendorSettings.vendorId, vendor.id), eq(vendorSettings.key, key)));
-        } else {
-            await db.insert(vendorSettings).values({
-                vendorId: vendor.id,
-                key,
-                value,
-            });
-        }
+    if (fetchError) throw new Error(fetchError.message);
+
+    if (existing) {
+      await supabase
+        .from("vendor_settings")
+        .update({
+          value,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("vendor_id", vendor.id)
+        .eq("key", key);
+    } else {
+      await supabase
+        .from("vendor_settings")
+        .insert({
+          vendor_id: vendor.id,
+          key,
+          value,
+        });
     }
+  }
 
-    revalidatePath("/settings");
-    return { success: true };
+  revalidatePath("/settings");
+  return { success: true };
 }

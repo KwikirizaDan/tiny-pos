@@ -1,11 +1,19 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, memo } from "react";
+
+const ClientDate = memo(function ClientDate() {
+  const [label, setLabel] = useState("");
+  useEffect(() => {
+    setLabel(new Date().toLocaleDateString("en-UG", { weekday: "long", day: "numeric", month: "long" }));
+  }, []);
+  return <>{label}</>;
+});
 import {
   TrendingUp, TrendingDown, ShoppingCart, DollarSign,
   Package, Users, AlertTriangle, ArrowRight,
 } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import type { Sale, Product } from "@/db/schema";
+import type { Sale, Product } from "@/types/pos";
 import Link from "next/link";
 
 interface KPIs {
@@ -64,7 +72,7 @@ export function DashboardClient({ kpis, recentSales, lowStock, vendorName }: Pro
       <div>
         <h1 className="text-2xl font-medium tracking-tight">Overview</h1>
         <p className="text-muted-foreground text-sm mt-1">
-          {vendorName} · {new Date().toLocaleDateString("en-UG", { weekday: "long", day: "numeric", month: "long" })}
+          {vendorName} · <ClientDate />
         </p>
       </div>
 
@@ -171,7 +179,7 @@ export function DashboardClient({ kpis, recentSales, lowStock, vendorName }: Pro
                 <span className={`text-[10px] px-2 py-0.5 capitalize font-medium ${statusVariant[sale.status ?? "completed"] ?? ""}`}>
                   {sale.status}
                 </span>
-                <span className="text-sm font-medium ml-2 shrink-0">{formatCurrency(sale.totalAmount)}</span>
+                <span className="text-sm font-medium ml-2 shrink-0">{formatCurrency(Number(sale.totalAmount))}</span>
               </div>
             ))}
           </div>

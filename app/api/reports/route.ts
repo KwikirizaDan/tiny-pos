@@ -1,82 +1,102 @@
-import { auth } from "@clerk/nextjs/server";
+import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
-import { getDb, sales, saleItems, products, customers, categories } from "@/db";
-import { eq, gte, lte, and, desc, sum, count, sql } from "drizzle-orm";
 
-async function getVendorId(clerkId: string) {
-  const { getDb: gdb, vendors } = await import("@/db");
-  const { eq: eqOp } = await import("drizzle-orm");
-  const db = gdb();
-  const [v] = await db.select().from(vendors).where(eqOp(vendors.ownerClerkId, clerkId));
-  return v?.id ?? null;
+async function getVendorFromAuthId(supabase: any, authId: string) {
+  const { data: vendor } = await supabase
+    .from('vendors')
+    .select('*')
+    .eq('owner_id', authId)
+    .single();
+  return vendor ?? null;
 }
 
 export async function GET(req: NextRequest) {
-  const { userId } = await auth();
-  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const vendorId = await getVendorId(userId);
-  if (!vendorId) return NextResponse.json({ error: "Vendor not found" }, { status: 404 });
+  const vendor = await getVendorFromAuthId(supabase, user.id);
+  if (!vendor) return NextResponse.json({ error: "Vendor not found" }, { status: 404 });
 
   const { searchParams } = new URL(req.url);
   const from = searchParams.get("from");
   const to = searchParams.get("to");
 
-  const db = getDb();
+  let query = supabase
+    .from('sales')
+    .select('*, sale_items(*)')
+    .eq('vendor_id', vendor.id)
+    .order('created_at', { ascending: false });
 
-  const conditions = [eq(sales.vendorId, vendorId)];
-  if (from) conditions.push(gte(sales.createdAt, new Date(from)));
+  if (from) query = query.gte('created_at', from);
   if (to) {
     const toDate = new Date(to);
     toDate.setHours(23, 59, 59, 999);
-    conditions.push(lte(sales.createdAt, toDate));
+    query = query.lte('created_at', toDate.toISOString());
   }
 
-  // All sales in range
-  const allSales = await db.select().from(sales)
-    .where(and(...conditions)).orderBy(desc(sales.createdAt));
+  const { data: allSales, error } = await query;
 
-  // Sales items with product names
-  const saleIds = allSales.map((s) => s.id);
-  let items: any[] = [];
-  if (saleIds.length > 0) {
-    items = await db.select({
-      saleId: saleItems.saleId,
-      productName: saleItems.productName,
-      quantity: saleItems.quantity,
-      unitPrice: saleItems.unitPrice,
-      subtotal: saleItems.subtotal,
-    }).from(saleItems);
-  }
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  // Top products
-  const topProducts = await db.select({
-    productName: saleItems.productName,
-    totalQty: sql<number>`sum(${saleItems.quantity})`.mapWith(Number),
-    totalRevenue: sql<string>`sum(${saleItems.subtotal})`,
-  }).from(saleItems)
-    .innerJoin(sales, eq(saleItems.saleId, sales.id))
-    .where(and(...conditions))
-    .groupBy(saleItems.productName)
-    .orderBy(sql`sum(${saleItems.subtotal}) desc`)
-    .limit(10);
+  // Process data in JS to match expected format
+  const items: any[] = [];
+  const productStats: Record<string, { totalQty: number, totalRevenue: number }> = {};
+  const dailyStats: Record<string, { totalRevenue: number, totalCount: number }> = {};
 
-  // Daily breakdown
-  const daily = await db.select({
-    date: sql<string>`date(${sales.createdAt})`,
-    totalRevenue: sql<string>`sum(${sales.totalAmount})`,
-    totalCount: sql<number>`count(*)`.mapWith(Number),
-  }).from(sales)
-    .where(and(...conditions))
-    .groupBy(sql`date(${sales.createdAt})`)
-    .orderBy(sql`date(${sales.createdAt})`);
+  let totalRevenue = 0;
+  let totalTax = 0;
+  let totalDiscount = 0;
+  let cashSales = 0;
+  let cardSales = 0;
 
-  // Summary
-  const totalRevenue = allSales.reduce((s, sale) => s + Number(sale.totalAmount), 0);
-  const totalTax = allSales.reduce((s, sale) => s + Number(sale.taxAmount ?? 0), 0);
-  const totalDiscount = allSales.reduce((s, sale) => s + Number(sale.discountAmount ?? 0), 0);
-  const cashSales = allSales.filter((s) => s.paymentMethod === "cash").length;
-  const cardSales = allSales.filter((s) => s.paymentMethod === "card").length;
+  allSales.forEach(sale => {
+    const revenue = Number(sale.total_amount);
+    totalRevenue += revenue;
+    totalTax += Number(sale.tax_amount || 0);
+    totalDiscount += Number(sale.discount_amount || 0);
+    
+    if (sale.payment_method === "cash") cashSales++;
+    else if (sale.payment_method === "card") cardSales++;
+
+    const date = new Date(sale.created_at).toISOString().split('T')[0];
+    if (!dailyStats[date]) dailyStats[date] = { totalRevenue: 0, totalCount: 0 };
+    dailyStats[date].totalRevenue += revenue;
+    dailyStats[date].totalCount += 1;
+
+    sale.sale_items?.forEach((item: any) => {
+      items.push({
+        saleId: item.sale_id,
+        productName: item.product_name,
+        quantity: item.quantity,
+        unitPrice: item.unit_price,
+        subtotal: item.subtotal,
+      });
+
+      if (!productStats[item.product_name]) {
+        productStats[item.product_name] = { totalQty: 0, totalRevenue: 0 };
+      }
+      productStats[item.product_name].totalQty += item.quantity;
+      productStats[item.product_name].totalRevenue += Number(item.subtotal);
+    });
+  });
+
+  const topProducts = Object.entries(productStats)
+    .map(([productName, stats]) => ({
+      productName,
+      totalQty: stats.totalQty,
+      totalRevenue: stats.totalRevenue.toString(),
+    }))
+    .sort((a, b) => Number(b.totalRevenue) - Number(a.totalRevenue))
+    .slice(0, 10);
+
+  const daily = Object.entries(dailyStats)
+    .map(([date, stats]) => ({
+      date,
+      totalRevenue: stats.totalRevenue.toString(),
+      totalCount: stats.totalCount,
+    }))
+    .sort((a, b) => a.date.localeCompare(b.date));
 
   return NextResponse.json({
     summary: {
@@ -88,7 +108,11 @@ export async function GET(req: NextRequest) {
       cashSales,
       cardSales,
     },
-    sales: allSales,
+    sales: allSales.map(s => ({
+      ...s,
+      // Map back to camelCase if needed by frontend, but guideline says use snake_case for column names.
+      // Usually the frontend expects the DB column names as they are returned.
+    })),
     items,
     topProducts,
     daily,

@@ -18,3 +18,7 @@ coverage/
 
 # clerk configuration (can include secrets)
 /.clerk/
+
+# unrelated directories / archives
+wordpress/
+latest.tar.gz

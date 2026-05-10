@@ -1,7 +1,5 @@
-import { auth } from "@clerk/nextjs/server";
+import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
-import { getDb, sales, saleItems, products, vendors } from "@/db";
-import { eq, and, inArray, sql, desc } from "drizzle-orm";
 import { z } from "zod";
 
 const schema = z.object({
@@ -12,40 +10,58 @@ const schema = z.object({
   notes: z.string().optional(),
 });
 
-async function getVendorId(clerkId: string) {
-  const db = getDb();
-  const [v] = await db.select({ id: vendors.id }).from(vendors).where(eq(vendors.ownerClerkId, clerkId));
-  return v?.id ?? null;
-}
-
 export async function GET() {
-  const { userId } = await auth();
-  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const vendorId = await getVendorId(userId);
-  if (!vendorId) return NextResponse.json({ error: "Vendor not found" }, { status: 404 });
-  const db = getDb();
-  const data = await db.select().from(sales).where(eq(sales.vendorId, vendorId)).orderBy(desc(sales.createdAt)).limit(200);
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const { data: vendor } = await supabase
+    .from('vendors')
+    .select('id')
+    .eq('owner_id', user.id)
+    .single();
+
+  if (!vendor) return NextResponse.json({ error: "Vendor not found" }, { status: 404 });
+
+  const { data, error } = await supabase
+    .from('sales')
+    .select('*')
+    .eq('vendor_id', vendor.id)
+    .order('created_at', { ascending: false })
+    .limit(200);
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json(data);
 }
 
 export async function POST(req: NextRequest) {
-  const { userId } = await auth();
-  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
   const parsed = schema.safeParse(await req.json());
   if (!parsed.success) return NextResponse.json({ error: parsed.error.issues }, { status: 400 });
-  const vendorId = await getVendorId(userId);
-  if (!vendorId) return NextResponse.json({ error: "Vendor not found" }, { status: 404 });
 
-  const db = getDb();
+  const { data: vendor } = await supabase
+    .from('vendors')
+    .select('id')
+    .eq('owner_id', user.id)
+    .single();
+
+  if (!vendor) return NextResponse.json({ error: "Vendor not found" }, { status: 404 });
+
   const { items, cashierId, customerId, paymentMethod, notes } = parsed.data;
 
-  // SECURITY FIX: Verify all products belong to this vendor and get real prices
-  const dbProducts = await db.select().from(products)
-    .where(and(inArray(products.id, items.map(i => i.productId)), eq(products.vendorId, vendorId)));
+  const { data: dbProducts, error: productsError } = await supabase
+    .from('products')
+    .select('*')
+    .in('id', items.map(i => i.productId))
+    .eq('vendor_id', vendor.id);
 
-  if (dbProducts.length !== items.length) return NextResponse.json({ error: "One or more products not found" }, { status: 404 });
+  if (productsError || !dbProducts || dbProducts.length !== items.length) {
+    return NextResponse.json({ error: "One or more products not found" }, { status: 404 });
+  }
 
-  // SECURITY FIX: Calculate totals server-side from real DB prices
   const subtotal = items.reduce((sum, item) => {
     const p = dbProducts.find(p => p.id === item.productId)!;
     return sum + Number(p.price) * item.quantity;
@@ -53,31 +69,55 @@ export async function POST(req: NextRequest) {
   const totalAmount = subtotal;
 
   try {
-    const [sale] = await db.insert(sales).values({
-      vendorId, // SECURITY FIX: from server, not client
-      cashierId: cashierId ?? null,
-      customerId: customerId ?? null,
-      subtotal: subtotal.toFixed(2),
-      taxAmount: "0",
-      discountAmount: "0",
-      totalAmount: totalAmount.toFixed(2),
-      paymentMethod, notes: notes ?? null, status: "completed",
-    }).returning();
+    const { data: sale, error: saleError } = await supabase
+      .from('sales')
+      .insert({
+        vendor_id: vendor.id,
+        cashier_id: cashierId ?? null,
+        customer_id: customerId ?? null,
+        subtotal: subtotal.toFixed(2),
+        tax_amount: "0",
+        discount_amount: "0",
+        total_amount: totalAmount.toFixed(2),
+        payment_method: paymentMethod,
+        notes: notes ?? null,
+        status: "completed",
+      })
+      .select()
+      .single();
 
-    await db.insert(saleItems).values(items.map(item => {
-      const p = dbProducts.find(p => p.id === item.productId)!;
-      return { saleId: sale.id, productId: item.productId, productName: item.productName, quantity: item.quantity, unitPrice: p.price, subtotal: (Number(p.price) * item.quantity).toFixed(2) };
-    }));
+    if (saleError) throw saleError;
 
-    // SECURITY FIX: scope stock updates to vendorId
+    const { error: itemsError } = await supabase
+      .from('sale_items')
+      .insert(items.map(item => {
+        const p = dbProducts.find(p => p.id === item.productId)!;
+        return {
+          sale_id: sale.id,
+          product_id: item.productId,
+          product_name: item.productName,
+          quantity: item.quantity,
+          unit_price: p.price,
+          subtotal: (Number(p.price) * item.quantity).toFixed(2)
+        };
+      }));
+
+    if (itemsError) throw itemsError;
+
     for (const item of items) {
-      await db.update(products).set({ stockQuantity: sql`${products.stockQuantity} - ${item.quantity}`, updatedAt: new Date() })
-        .where(and(eq(products.id, item.productId), eq(products.vendorId, vendorId)));
+      const p = dbProducts.find(p => p.id === item.productId)!;
+      await supabase
+        .from('products')
+        .update({
+          stock_quantity: p.stock_quantity - item.quantity,
+          updated_at: new Date().toISOString()
+        })
+        .match({ id: item.productId, vendor_id: vendor.id });
     }
 
     return NextResponse.json(sale, { status: 201 });
   } catch (error: any) {
     console.error("Order error:", error);
-    return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 });
+    return NextResponse.json({ error: error.message || "Something went wrong. Please try again." }, { status: 500 });
   }
 }

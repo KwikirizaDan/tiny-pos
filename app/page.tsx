@@ -1,23 +1,19 @@
-import { auth } from "@clerk/nextjs/server";
+import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { getVendorId } from "@/lib/vendor";
-import { SignIn } from "@clerk/nextjs";
+import { LoginForm } from "@/components/login-form";
 
 export default async function HomePage() {
-  const { userId } = await auth();
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
 
-  if (!userId) {
+  if (!user) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <SignIn routing="hash" />
+      <div className="flex items-center justify-center min-h-screen bg-background px-4">
+        <div className="w-full max-w-sm">
+          <LoginForm />
+        </div>
       </div>
     );
-  }
-
-  const vendorId = await getVendorId(userId);
-
-  if (!vendorId) {
-    redirect("/onboarding");
   }
 
   redirect("/dashboard");

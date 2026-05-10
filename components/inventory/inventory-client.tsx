@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatDate } from "@/lib/utils";
-import type { InventoryLog, Product } from "@/db/schema";
+import type { InventoryLog, Product } from "@/types/pos";
 import { createInventoryLog } from "@/app/(dashboard)/inventory/actions";
 
 const changeTypeVariant: Record<string, "success" | "destructive" | "secondary" | "warning"> = {
@@ -94,14 +94,14 @@ export function InventoryClient({ logs: init, products }: { logs: InventoryLog[]
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-1.5">
               <Label>Product *</Label>
-              <Select value={form.productId} onValueChange={(v) => setForm({ ...form, productId: v })}>
+              <Select value={form.productId} onValueChange={(v) => setForm({ ...form, productId: v ?? form.productId })}>
                 <SelectTrigger><SelectValue placeholder="Select product" /></SelectTrigger>
                 <SelectContent>{products.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div className="space-y-1.5">
               <Label>Type *</Label>
-              <Select value={form.changeType} onValueChange={(v) => setForm({ ...form, changeType: v })}>
+              <Select value={form.changeType} onValueChange={(v) => setForm({ ...form, changeType: v ?? form.changeType })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="restock">Restock</SelectItem>

@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatDate } from "@/lib/utils";
-import type { AuditLog } from "@/db/schema";
+import type { AuditLog } from "@/types/pos";
 
 export function AuditClient({ logs }: { logs: AuditLog[] }) {
   const [filter, setFilter] = useState("");

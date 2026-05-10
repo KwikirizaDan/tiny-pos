@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ReceiptPrint } from "@/components/receipt/receipt-print";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import type { Sale } from "@/db/schema";
+import type { Sale } from "@/types/pos";
 
 const col = createColumnHelper<Sale>();
 
@@ -68,7 +68,7 @@ export function OrdersClient({
           Total <ArrowUpDown className="h-3 w-3" />
         </button>
       ),
-      cell: (i) => <span className="font-medium">{formatCurrency(i.getValue())}</span>,
+      cell: (i) => <span className="font-medium">{formatCurrency(Number(i.getValue()))}</span>,
     }),
     col.display({
       id: "receipt",

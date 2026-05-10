@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import type { Discount } from "@/db/schema";
+import type { Discount } from "@/types/pos";
 import { createDiscount, updateDiscount } from "@/app/(dashboard)/discounts/actions";
 
 interface Props {
@@ -26,8 +26,8 @@ export function DiscountDialog({ open, onOpenChange, discount, onSave }: Props) 
         code: discount.code ?? "",
         description: discount.description ?? "",
         discountType: discount.discountType,
-        value: discount.value,
-        minOrderAmount: discount.minOrderAmount ?? "",
+        value: String(discount.value),
+        minOrderAmount: discount.minOrderAmount != null ? String(discount.minOrderAmount) : "",
         maxUses: discount.maxUses ? String(discount.maxUses) : "",
         expiresAt: discount.expiresAt ? new Date(discount.expiresAt).toISOString().slice(0, 10) : "",
       });
@@ -69,7 +69,7 @@ export function DiscountDialog({ open, onOpenChange, discount, onSave }: Props) 
             <div className="col-span-2 space-y-1.5"><Label>Code *</Label><Input value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })} placeholder="SAVE10" required /></div>
             <div className="space-y-1.5">
               <Label>Type *</Label>
-              <Select value={form.discountType} onValueChange={(v) => setForm({ ...form, discountType: v })}>
+              <Select value={form.discountType} onValueChange={(v) => setForm({ ...form, discountType: v ?? form.discountType })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="percentage">Percentage (%)</SelectItem>
