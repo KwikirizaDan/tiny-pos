@@ -141,7 +141,7 @@ export function SignUpForm() {
               <p className="text-sm text-destructive">{error}</p>
             )}
           </CardContent>
-          <CardFooter className="flex flex-col gap-4">
+          <CardFooter className="flex pt-4 mt-4 flex-col gap-4">
             <Button type="submit" className="w-full" disabled={isPending}>
               {isPending ? "Creating account..." : "Create account"}
             </Button>
