@@ -16,7 +16,14 @@ next-env.d.ts
 coverage/
 .vercel
 .claude/
+__pycache__/
 
 # unrelated directories / archives
 wordpress/
 latest.tar.gz
+
+# Next.js only: exclude non-Next.js files
+*.md
+*.sql
+.env*
+reports-api/
