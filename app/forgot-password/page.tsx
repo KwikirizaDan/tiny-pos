@@ -21,7 +21,6 @@ type FormValues = z.infer<typeof schema>
 export default function ForgotPasswordPage() {
   const [isPending, setIsPending] = React.useState(false)
   const [sent, setSent] = React.useState(false)
-  const supabase = createClient()
 
   const { register, handleSubmit, formState: { errors } } = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -29,6 +28,7 @@ export default function ForgotPasswordPage() {
 
   async function onSubmit(data: FormValues) {
     setIsPending(true)
+    const supabase = createClient()
     const { error } = await supabase.auth.resetPasswordForEmail(data.email, {
       redirectTo: `${window.location.origin}/auth/callback?next=/reset-password`,
     })

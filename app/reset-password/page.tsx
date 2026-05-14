@@ -29,7 +29,6 @@ export default function ResetPasswordPage() {
   const [showPassword, setShowPassword] = React.useState(false)
   const [showConfirm, setShowConfirm] = React.useState(false)
   const router = useRouter()
-  const supabase = createClient()
 
   const { register, handleSubmit, formState: { errors } } = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -37,6 +36,7 @@ export default function ResetPasswordPage() {
 
   async function onSubmit(data: FormValues) {
     setIsPending(true)
+    const supabase = createClient()
     const { error } = await supabase.auth.updateUser({ password: data.password })
     setIsPending(false)
     if (error) {
