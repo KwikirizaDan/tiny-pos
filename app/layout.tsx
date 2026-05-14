@@ -2,6 +2,11 @@ import type { Metadata } from "next";
 import { Toaster } from "sonner";
 import "./globals.css";
 import { cn } from "@/lib/utils";
+import { Instrument_Sans, Geist_Mono } from "next/font/google";
+
+const geistMonoHeading = Geist_Mono({subsets:['latin'],variable:'--font-heading'});
+
+const instrumentSans = Instrument_Sans({subsets:['latin'],variable:'--font-sans'});
 
 export const metadata: Metadata = {
   title: "TinyPOS",
@@ -32,7 +37,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" suppressHydrationWarning className={cn("font-sans")}>
+    <html lang="en" suppressHydrationWarning className={cn("font-sans", instrumentSans.variable, geistMonoHeading.variable)}>
       <body suppressHydrationWarning>
           <script
             dangerouslySetInnerHTML={{
