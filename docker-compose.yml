@@ -1,0 +1,37 @@
+services:
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  reports-api:
+    build: ./reports-api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    env_file: ./reports-api/.env
+    depends_on:
+      - redis
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 2
+
+  reports-worker:
+    build: ./reports-api
+    restart: unless-stopped
+    env_file: ./reports-api/.env
+    depends_on:
+      - redis
+    command: celery -A app.celery_app worker --loglevel=info --concurrency=2
+
+  reports-beat:
+    build: ./reports-api
+    restart: unless-stopped
+    env_file: ./reports-api/.env
+    depends_on:
+      - redis
+    command: celery -A app.celery_app beat --loglevel=info
+
+volumes:
+  redis_data:

@@ -1,29 +1,51 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 
+async function tryResolveVendor(supabase: any, authId: string) {
+  // First: user has a profile in the users table (staff or owner)
+  const { data: profile } = await supabase
+    .from('users')
+    .select('vendor_id')
+    .eq('auth_id', authId)
+    .maybeSingle();
+
+  if (profile?.vendor_id) {
+    const { data: vendor } = await supabase
+      .from('vendors')
+      .select('*')
+      .eq('id', profile.vendor_id)
+      .single();
+    if (vendor) return vendor;
+  }
+
+  // Fallback: user is the vendor owner (no users row yet)
+  const { data: vendor } = await supabase
+    .from('vendors')
+    .select('*')
+    .eq('owner_id', authId)
+    .single();
+
+  return vendor ?? null;
+}
+
 export async function getVendor() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/sign-in");
-  
-  const { data: vendor } = await supabase
-    .from('vendors')
-    .select('*')
-    .eq('owner_id', user.id)
-    .single();
-    
+
+  const vendor = await tryResolveVendor(supabase, user.id);
   if (!vendor) redirect("/onboarding")
   return vendor;
 }
 
 export async function getVendorId(authId: string): Promise<string | null> {
   const supabase = await createClient();
-  const { data: vendor } = await supabase
-    .from('vendors')
-    .select('id')
-    .eq('owner_id', authId)
-    .single();
+  const vendor = await tryResolveVendor(supabase, authId);
   return vendor?.id ?? null;
+}
+
+export async function resolveVendor(supabase: any, authId: string) {
+  return tryResolveVendor(supabase, authId);
 }
 
 export async function getVendorUser() {

@@ -210,69 +210,80 @@ export function ReportsClient({ vendorName }: { vendorName: string }) {
     if (!data) return;
     setExporting("excel");
     try {
-      const XLSX = await import("xlsx");
+      const { default: ExcelJS } = await import("exceljs");
 
-      const wb = XLSX.utils.book_new();
+      const wb = new ExcelJS.Workbook();
+      wb.creator = "TinyPOS";
 
       // Summary sheet
-      const summaryRows = [
-        ["TinyPOS Sales Report"],
-        [`Store: ${vendorName}`],
-        [`Period: ${from} to ${to}`],
-        [`Generated: ${new Date().toLocaleString()}`],
-        [],
-        ["Metric", "Value"],
-        ["Total Sales", data.summary.totalSales],
-        ["Total Revenue (UGX)", Number(data.summary.totalRevenue)],
-        ["Average Sale (UGX)", Number(data.summary.avgSale.toFixed(0))],
-        ["Tax Collected (UGX)", Number(data.summary.totalTax)],
-        ["Discount Given (UGX)", Number(data.summary.totalDiscount)],
-        ["Cash Sales", data.summary.cashSales],
-        ["Card Sales", data.summary.cardSales],
-      ];
-      const wsSummary = XLSX.utils.aoa_to_sheet(summaryRows);
-      wsSummary["!cols"] = [{ wch: 28 }, { wch: 20 }];
-      XLSX.utils.book_append_sheet(wb, wsSummary, "Summary");
+      const ws = wb.addWorksheet("Summary");
+      ws.addRow(["TinyPOS Sales Report"]);
+      ws.addRow([`Store: ${vendorName}`]);
+      ws.addRow([`Period: ${from} to ${to}`]);
+      ws.addRow([`Generated: ${new Date().toLocaleString()}`]);
+      ws.addRow([]);
+      ws.addRow(["Metric", "Value"]);
+      ws.addRow(["Total Sales", data.summary.totalSales]);
+      ws.addRow(["Total Revenue (UGX)", Number(data.summary.totalRevenue)]);
+      ws.addRow(["Average Sale (UGX)", Number(data.summary.avgSale.toFixed(0))]);
+      ws.addRow(["Tax Collected (UGX)", Number(data.summary.totalTax)]);
+      ws.addRow(["Discount Given (UGX)", Number(data.summary.totalDiscount)]);
+      ws.addRow(["Cash Sales", data.summary.cashSales]);
+      ws.addRow(["Card Sales", data.summary.cardSales]);
+      ws.getColumn(1).width = 28;
+      ws.getColumn(2).width = 20;
 
       // Transactions sheet
-      const txHeaders = ["Order ID", "Date", "Payment Method", "Status", "Subtotal (UGX)", "Tax (UGX)", "Discount (UGX)", "Total (UGX)"];
-      const txRows = data.sales.map((s) => [
-        s.id.slice(0, 8).toUpperCase(),
-        formatDate(s.createdAt),
-        s.paymentMethod ?? "",
-        s.status ?? "",
-        Number(s.subtotal),
-        Number(s.taxAmount ?? 0),
-        Number(s.discountAmount ?? 0),
-        Number(s.totalAmount),
-      ]);
-      const wsTx = XLSX.utils.aoa_to_sheet([txHeaders, ...txRows]);
-      wsTx["!cols"] = [{ wch: 14 }, { wch: 20 }, { wch: 16 }, { wch: 12 }, { wch: 16 }, { wch: 12 }, { wch: 16 }, { wch: 16 }];
-      XLSX.utils.book_append_sheet(wb, wsTx, "Transactions");
+      const wsTx = wb.addWorksheet("Transactions");
+      wsTx.addRow(["Order ID", "Date", "Payment Method", "Status", "Subtotal (UGX)", "Tax (UGX)", "Discount (UGX)", "Total (UGX)"]);
+      data.sales.forEach((s) =>
+        wsTx.addRow([
+          s.id.slice(0, 8).toUpperCase(),
+          formatDate(s.createdAt),
+          s.paymentMethod ?? "",
+          s.status ?? "",
+          Number(s.subtotal),
+          Number(s.taxAmount ?? 0),
+          Number(s.discountAmount ?? 0),
+          Number(s.totalAmount),
+        ])
+      );
+      wsTx.getColumn(1).width = 14;
+      wsTx.getColumn(2).width = 20;
+      wsTx.getColumn(3).width = 16;
+      wsTx.getColumn(4).width = 12;
+      [5, 6, 7, 8].forEach((i) => (wsTx.getColumn(i).width = 16));
 
       // Top Products sheet
-      const prodHeaders = ["Product Name", "Qty Sold", "Revenue (UGX)"];
-      const prodRows = data.topProducts.map((p) => [
-        p.productName,
-        p.totalQty,
-        Number(p.totalRevenue),
-      ]);
-      const wsProd = XLSX.utils.aoa_to_sheet([prodHeaders, ...prodRows]);
-      wsProd["!cols"] = [{ wch: 30 }, { wch: 12 }, { wch: 18 }];
-      XLSX.utils.book_append_sheet(wb, wsProd, "Top Products");
+      const wsProd = wb.addWorksheet("Top Products");
+      wsProd.addRow(["Product Name", "Qty Sold", "Revenue (UGX)"]);
+      data.topProducts.forEach((p) =>
+        wsProd.addRow([p.productName, p.totalQty, Number(p.totalRevenue)])
+      );
+      wsProd.getColumn(1).width = 30;
+      wsProd.getColumn(2).width = 12;
+      wsProd.getColumn(3).width = 18;
 
       // Daily sheet
-      const dailyHeaders = ["Date", "Sales Count", "Revenue (UGX)"];
-      const dailyRows = data.daily.map((d) => [
-        d.date,
-        d.totalCount,
-        Number(d.totalRevenue),
-      ]);
-      const wsDaily = XLSX.utils.aoa_to_sheet([dailyHeaders, ...dailyRows]);
-      wsDaily["!cols"] = [{ wch: 14 }, { wch: 14 }, { wch: 18 }];
-      XLSX.utils.book_append_sheet(wb, wsDaily, "Daily Breakdown");
+      const wsDaily = wb.addWorksheet("Daily Breakdown");
+      wsDaily.addRow(["Date", "Sales Count", "Revenue (UGX)"]);
+      data.daily.forEach((d) =>
+        wsDaily.addRow([d.date, d.totalCount, Number(d.totalRevenue)])
+      );
+      wsDaily.getColumn(1).width = 14;
+      wsDaily.getColumn(2).width = 14;
+      wsDaily.getColumn(3).width = 18;
 
-      XLSX.writeFile(wb, `tinypos-report-${from}-to-${to}.xlsx`);
+      const buffer = await wb.xlsx.writeBuffer();
+      const blob = new Blob([buffer], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `tinypos-report-${from}-to-${to}.xlsx`;
+      a.click();
+      URL.revokeObjectURL(url);
       toast.success("Excel downloaded");
     } catch (e: any) {
       console.error(e);

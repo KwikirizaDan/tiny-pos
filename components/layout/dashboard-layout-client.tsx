@@ -17,7 +17,7 @@ export function DashboardLayoutClient({ children, userRole }: { children: React.
       <div className="flex flex-col flex-1 overflow-hidden min-w-0">
         <Header />
         <main className="flex-1 overflow-y-auto">
-          <div className="p-4 md:p-6 max-w-7xl mx-auto w-full">{children}</div>
+          <div className="px-2 py-4 md:px-4 md:py-6 max-w-screen-2xl mx-auto w-full">{children}</div>
         </main>
       </div>
     </div>

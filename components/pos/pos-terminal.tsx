@@ -125,6 +125,9 @@ export function POSTerminal({ products: initialProducts, categories: initialCate
     const formatUGX = (v: number) =>
       "UGX " + new Intl.NumberFormat("en-UG", { minimumFractionDigits: 0 }).format(v);
 
+    const h = (s: string | null | undefined) =>
+      s ? s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;") : "";
+
     const win = window.open("", "_blank", "width=400,height=600");
     if (!win) return;
     win.document.write(`
@@ -141,21 +144,21 @@ body { font-family:'Courier New',monospace;font-size:12px;color:#000;background:
 .footer{text-align:center;font-size:10px;color:#555;margin-top:8px}
 @media print{body{width:100%;padding:0}@page{margin:4mm;size:80mm auto}}
 </style></head><body>
-<div class="center"><div class="big">${vendor.name}</div><div>+256 707 265 240</div><div>Kampala, Uganda</div></div>
+<div class="center"><div class="big">${h(vendor.name)}</div><div>+256 707 265 240</div><div>Kampala, Uganda</div></div>
 <hr class="divider">
-<div class="row"><span>Order</span><span>${sale.id.slice(0, 8).toUpperCase()}</span></div>
+<div class="row"><span>Order</span><span>${h(sale.id.slice(0, 8).toUpperCase())}</span></div>
 <div class="row"><span>Date</span><span>${new Date(sale.createdAt!).toLocaleDateString("en-UG")}</span></div>
 <div class="row"><span>Time</span><span>${new Date(sale.createdAt!).toLocaleTimeString("en-UG", { hour: "2-digit", minute: "2-digit" })}</span></div>
-<div class="row"><span>Payment</span><span style="text-transform:capitalize">${sale.paymentMethod}</span></div>
+<div class="row"><span>Payment</span><span style="text-transform:capitalize">${h(sale.paymentMethod)}</span></div>
 <hr class="divider">
-${items.map((item) => `<div class="row"><span>${item.product.name} × ${item.quantity}</span><span>${formatUGX(Number(item.product.price) * item.quantity)}</span></div>`).join("")}
+${items.map((item) => `<div class="row"><span>${h(item.product.name)} × ${item.quantity}</span><span>${formatUGX(Number(item.product.price) * item.quantity)}</span></div>`).join("")}
 <hr class="divider">
 <div class="row"><span>Subtotal</span><span>${formatUGX(Number(sale.subtotal))}</span></div>
 ${Number(sale.taxAmount) > 0 ? `<div class="row"><span>Tax</span><span>${formatUGX(Number(sale.taxAmount))}</span></div>` : ""}
 <div class="row-total"><span>TOTAL</span><span>${formatUGX(Number(sale.totalAmount))}</span></div>
 <hr class="divider">
 <div class="barcode"><span style="width:1px"></span><span style="width:3px"></span><span style="width:1px"></span><span style="width:2px"></span><span style="width:1px"></span><span style="width:3px"></span><span style="width:2px"></span><span style="width:1px"></span><span style="width:3px"></span><span style="width:1px"></span><span style="width:2px"></span><span style="width:3px"></span></div>
-<div class="footer">${receiptFooter ?? "Thank you for shopping with us!"}<br>Powered by TinyPOS · Binary Labs</div>
+<div class="footer">${h(receiptFooter) ?? "Thank you for shopping with us!"}<br>Powered by TinyPOS · Binary Labs</div>
 <script>window.onload=function(){window.print();window.close();}<\/script>
 </body></html>`);
     win.document.close();

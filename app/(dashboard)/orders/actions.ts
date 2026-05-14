@@ -110,15 +110,13 @@ export async function createOrder(data: z.infer<typeof orderSchema>) {
     if (itemsError) throw new Error(itemsError.message);
 
     for (const item of items) {
-      const p = dbProducts.find(p => p.id === item.productId)!;
-      await supabase
-        .from("products")
-        .update({
-          stock_quantity: (p.stock_quantity ?? 0) - item.quantity,
-          updated_at: new Date().toISOString()
-        })
-        .eq("id", item.productId)
-        .eq("vendor_id", vendor.id);
+      const { data: ok } = await supabase.rpc("decrement_stock", {
+        p_id: item.productId,
+        p_quantity: item.quantity,
+      });
+      if (ok === false) {
+        throw new Error(`Insufficient stock for product: ${item.productName}`);
+      }
     }
 
     // Increment discount usage count

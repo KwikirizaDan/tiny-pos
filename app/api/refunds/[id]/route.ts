@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { resolveVendor } from "@/lib/vendor";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
@@ -6,15 +7,6 @@ const schema = z.object({
   status: z.enum(["processed", "pending", "rejected"]).optional(),
   reason: z.string().optional(),
 });
-
-async function getVendorFromAuthId(supabase: any, authId: string) {
-  const { data: vendor } = await supabase
-    .from('vendors')
-    .select('*')
-    .eq('owner_id', authId)
-    .single();
-  return vendor ?? null;
-}
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const supabase = await createClient();
@@ -26,7 +18,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const parsed = schema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: parsed.error.issues }, { status: 400 });
 
-  const vendor = await getVendorFromAuthId(supabase, user.id);
+  const vendor = await resolveVendor(supabase, user.id);
   if (!vendor) return NextResponse.json({ error: "Vendor not found" }, { status: 404 });
 
   const { data: updated, error } = await supabase

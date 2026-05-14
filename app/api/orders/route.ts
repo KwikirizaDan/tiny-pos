@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { resolveVendor } from "@/lib/vendor";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
@@ -15,12 +16,7 @@ export async function GET() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { data: vendor } = await supabase
-    .from('vendors')
-    .select('id')
-    .eq('owner_id', user.id)
-    .single();
-
+  const vendor = await resolveVendor(supabase, user.id);
   if (!vendor) return NextResponse.json({ error: "Vendor not found" }, { status: 404 });
 
   const { data, error } = await supabase
@@ -42,12 +38,7 @@ export async function POST(req: NextRequest) {
   const parsed = schema.safeParse(await req.json());
   if (!parsed.success) return NextResponse.json({ error: parsed.error.issues }, { status: 400 });
 
-  const { data: vendor } = await supabase
-    .from('vendors')
-    .select('id')
-    .eq('owner_id', user.id)
-    .single();
-
+  const vendor = await resolveVendor(supabase, user.id);
   if (!vendor) return NextResponse.json({ error: "Vendor not found" }, { status: 404 });
 
   const { items, cashierId, customerId, paymentMethod, notes } = parsed.data;
@@ -105,14 +96,13 @@ export async function POST(req: NextRequest) {
     if (itemsError) throw itemsError;
 
     for (const item of items) {
-      const p = dbProducts.find(p => p.id === item.productId)!;
-      await supabase
-        .from('products')
-        .update({
-          stock_quantity: p.stock_quantity - item.quantity,
-          updated_at: new Date().toISOString()
-        })
-        .match({ id: item.productId, vendor_id: vendor.id });
+      const { data: ok } = await supabase.rpc("decrement_stock", {
+        p_id: item.productId,
+        p_quantity: item.quantity,
+      });
+      if (ok === false) {
+        throw new Error(`Insufficient stock for product: ${item.productName}`);
+      }
     }
 
     return NextResponse.json(sale, { status: 201 });

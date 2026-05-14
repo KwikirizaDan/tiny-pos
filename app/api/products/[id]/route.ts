@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { resolveVendor } from "@/lib/vendor";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
@@ -27,12 +28,7 @@ export async function PATCH(
   const parsed = updateSchema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: parsed.error.issues }, { status: 400 });
 
-  const { data: vendor } = await supabase
-    .from('vendors')
-    .select('id')
-    .eq('owner_id', user.id)
-    .single();
-
+  const vendor = await resolveVendor(supabase, user.id);
   if (!vendor) return NextResponse.json({ error: "Vendor not found" }, { status: 404 });
 
   const updateData: any = {};
@@ -69,12 +65,7 @@ export async function DELETE(
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id } = await params;
-  const { data: vendor } = await supabase
-    .from('vendors')
-    .select('id')
-    .eq('owner_id', user.id)
-    .single();
-
+  const vendor = await resolveVendor(supabase, user.id);
   if (!vendor) return NextResponse.json({ error: "Vendor not found" }, { status: 404 });
 
   const { error } = await supabase

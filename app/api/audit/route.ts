@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { resolveVendor } from "@/lib/vendor";
 import { NextResponse } from "next/server";
 
 export async function GET() {
@@ -6,12 +7,7 @@ export async function GET() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { data: vendor } = await supabase
-    .from('vendors')
-    .select('id')
-    .eq('owner_id', user.id)
-    .single();
-
+  const vendor = await resolveVendor(supabase, user.id);
   if (!vendor) return NextResponse.json({ error: "Vendor not found" }, { status: 404 });
 
   const { data, error } = await supabase

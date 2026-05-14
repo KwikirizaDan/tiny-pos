@@ -28,7 +28,7 @@ $$;
 
 -- Helper: returns the role of the current user within their vendor
 CREATE OR REPLACE FUNCTION current_user_role()
-RETURNS text
+RETURNS user_role
 LANGUAGE sql
 STABLE
 SECURITY DEFINER
@@ -95,9 +95,11 @@ CREATE POLICY "users_insert" ON users
 
 -- Owners can update any staff; users can update their own auth_id (for linking)
 CREATE POLICY "users_update" ON users
-  FOR UPDATE USING (
+  FOR UPDATE
+  USING (owns_vendor(vendor_id) OR auth_id = auth.uid())
+  WITH CHECK (
     owns_vendor(vendor_id)
-    OR auth_id = auth.uid()
+    OR (auth_id = auth.uid() AND role = current_user_role())
   );
 
 -- Only owners can delete staff
@@ -282,6 +284,24 @@ CREATE POLICY "vendor_settings_update" ON vendor_settings
   FOR UPDATE USING (vendor_id = current_vendor_id() OR owns_vendor(vendor_id));
 
 -- ============================================================
+-- decrement_stock — atomically deduct stock, returns false if insufficient
+-- ============================================================
+CREATE OR REPLACE FUNCTION decrement_stock(p_id uuid, p_quantity integer)
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  UPDATE products
+  SET stock_quantity = stock_quantity - p_quantity,
+      updated_at = now()
+  WHERE id = p_id
+    AND stock_quantity >= p_quantity;
+  RETURN FOUND;
+END;
+$$;
+
+-- ============================================================
 -- increment_discount_uses — called by createOrder()
 -- ============================================================
 CREATE OR REPLACE FUNCTION increment_discount_uses(discount_id uuid)
@@ -291,5 +311,6 @@ SECURITY DEFINER
 AS $$
   UPDATE discounts
   SET uses_count = uses_count + 1
-  WHERE id = discount_id;
+  WHERE id = discount_id
+    AND vendor_id = current_vendor_id();
 $$;
