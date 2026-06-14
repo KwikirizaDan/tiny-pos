@@ -112,7 +112,11 @@ export function InventoryClient({ logs: init, products }: { logs: InventoryLog[]
             <div className="space-y-1.5">
               <Label>Product *</Label>
               <Select value={form.productId} onValueChange={(v) => setForm({ ...form, productId: v ?? form.productId })}>
-                <SelectTrigger className="w-full"><SelectValue placeholder="Select product" /></SelectTrigger>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select product">
+                    {form.productId ? products.find((p) => p.id === form.productId)?.name ?? "Select product" : undefined}
+                  </SelectValue>
+                </SelectTrigger>
                 <SelectContent>{products.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
               </Select>
             </div>

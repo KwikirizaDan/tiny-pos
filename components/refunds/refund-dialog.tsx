@@ -47,7 +47,11 @@ export function RefundDialog({ open, onOpenChange, sales, onSave }: Props) {
           <div className="space-y-1.5">
             <Label>Select sale *</Label>
             <Select value={form.saleId} onValueChange={(v) => { const s = sales.find((x) => x.id === v); setForm({ ...form, saleId: v ?? form.saleId, amount: s ? String(s.totalAmount) : "" }); }}>
-              <SelectTrigger className="w-full"><SelectValue placeholder="Select a completed sale" /></SelectTrigger>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select a completed sale">
+                  {selectedSale ? `${selectedSale.id.slice(0, 8).toUpperCase()} · ${formatCurrency(Number(selectedSale.totalAmount))} · ${formatDate(selectedSale.createdAt!)}` : undefined}
+                </SelectValue>
+              </SelectTrigger>
               <SelectContent>
                 {sales.filter((s) => s.status === "completed").map((s) => (
                   <SelectItem key={s.id} value={s.id}>
