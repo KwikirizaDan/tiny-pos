@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { Plus, Pencil, Trash2, ArrowUpDown, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
@@ -31,6 +32,7 @@ export function ProductsClient({
   const [products, setProducts] = useState(initialProducts);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+  const [stockFilter, setStockFilter] = useState("all");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editProduct, setEditProduct] = useState<Product | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<Product | null>(null);
@@ -97,7 +99,21 @@ export function ProductsClient({
       cell: (info) => <span className="font-medium">{formatCurrency(Number(info.getValue()))}</span>,
     }),
     col.accessor("stockQuantity", {
-      header: () => <span className="text-xs uppercase tracking-widest text-muted-foreground">Stock</span>,
+      header: ({ column }) => (
+        <button className="flex items-center gap-1 text-xs uppercase tracking-widest text-muted-foreground hover:text-foreground"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
+          Stock <ArrowUpDown className="h-3 w-3" />
+        </button>
+      ),
+      filterFn: (row, _columnId, filterValue) => {
+        if (!filterValue || filterValue === "all") return true;
+        const qty = row.getValue<number>("stockQuantity") ?? 0;
+        const low = row.original.lowStockAlert ?? 5;
+        if (filterValue === "out") return qty === 0;
+        if (filterValue === "low") return qty > 0 && qty <= low;
+        if (filterValue === "in") return qty > low;
+        return true;
+      },
       cell: (info) => {
         const qty = info.getValue() ?? 0;
         const low = info.row.original.lowStockAlert ?? 5;
@@ -156,9 +172,22 @@ export function ProductsClient({
             onChange={(e) => table.getColumn("name")?.setFilterValue(e.target.value)}
           />
         </div>
-        <Button onClick={() => { setEditProduct(null); setDialogOpen(true); }} size="sm">
-          <Plus className="h-4 w-4" /> Add product
-        </Button>
+        <div className="flex items-center gap-2">
+          <Select value={stockFilter} onValueChange={(v) => { const val = v ?? "all"; setStockFilter(val); table.getColumn("stockQuantity")?.setFilterValue(val === "all" ? undefined : val); }}>
+            <SelectTrigger className="w-36 h-9 text-xs">
+              <SelectValue placeholder="Stock" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All stock</SelectItem>
+              <SelectItem value="out">Out of stock</SelectItem>
+              <SelectItem value="low">Low stock</SelectItem>
+              <SelectItem value="in">In stock</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button onClick={() => { setEditProduct(null); setDialogOpen(true); }} size="sm">
+            <Plus className="h-4 w-4" /> Add product
+          </Button>
+        </div>
       </div>
 
       <div className="border">
