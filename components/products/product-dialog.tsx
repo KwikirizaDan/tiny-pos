@@ -165,7 +165,7 @@ export function ProductDialog({ open, onOpenChange, product, categories, vendorI
             <div className="col-span-2 space-y-1.5">
               <Label>Category</Label>
               <Select value={form.categoryId} onValueChange={(v) => setForm({ ...form, categoryId: v ?? form.categoryId })}>
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select category">
                     {form.categoryId !== "none"
                       ? categories.find((c) => c.id === form.categoryId)?.name ?? "Select category"
