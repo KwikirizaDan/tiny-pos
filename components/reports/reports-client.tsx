@@ -27,6 +27,8 @@ interface ReportData {
   daily: { date: string; totalRevenue: string; totalCount: number }[];
 }
 
+const PAGE_SIZE = 10;
+
 export function ReportsClient({ vendorName }: { vendorName: string }) {
   const today = new Date().toISOString().slice(0, 10);
   const firstOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10);
@@ -36,6 +38,7 @@ export function ReportsClient({ vendorName }: { vendorName: string }) {
   const [data, setData] = useState<ReportData | null>(null);
   const [loading, setLoading] = useState(false);
   const [exporting, setExporting] = useState<"pdf" | "excel" | null>(null);
+  const [txPage, setTxPage] = useState(0);
 
   const fetchReport = useCallback(async () => {
     setLoading(true);
@@ -437,7 +440,7 @@ export function ReportsClient({ vendorName }: { vendorName: string }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {data.sales.slice(0, 50).map((s) => (
+                  {data.sales.slice(txPage * PAGE_SIZE, (txPage + 1) * PAGE_SIZE).map((s) => (
                     <tr key={s.id} className="border-b hover:bg-muted/40">
                       <td className="p-3 font-mono text-xs">{s.id.slice(0, 8).toUpperCase()}</td>
                       <td className="p-3 text-xs text-muted-foreground">{formatDate(s.createdAt)}</td>
@@ -448,12 +451,19 @@ export function ReportsClient({ vendorName }: { vendorName: string }) {
                       <td className="p-3 text-right font-medium">{formatCurrency(Number(s.totalAmount))}</td>
                     </tr>
                   ))}
-                  {data.sales.length > 50 && (
-                    <tr><td colSpan={5} className="p-3 text-center text-xs text-muted-foreground">Showing 50 of {data.sales.length} — download Excel for full data</td></tr>
-                  )}
                 </tbody>
               </table>
             </div>
+            {data.sales.length > PAGE_SIZE && (
+              <div className="flex items-center justify-between px-4 py-3 text-sm text-muted-foreground border-t">
+                <span>{data.sales.length} records</span>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="sm" onClick={() => setTxPage(p => Math.max(0, p - 1))} disabled={txPage === 0}>Previous</Button>
+                  <span className="text-xs">Page {txPage + 1} of {Math.ceil(data.sales.length / PAGE_SIZE)}</span>
+                  <Button variant="outline" size="sm" onClick={() => setTxPage(p => Math.min(Math.ceil(data.sales.length / PAGE_SIZE) - 1, p + 1))} disabled={txPage >= Math.ceil(data.sales.length / PAGE_SIZE) - 1}>Next</Button>
+                </div>
+              </div>
+            )}
           </div>
         </>
       )}

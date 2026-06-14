@@ -93,7 +93,7 @@ export function OrdersClient({
     getFilteredRowModel: getFilteredRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
-    initialState: { pagination: { pageSize: 25 } },
+    initialState: { pagination: { pageSize: 10 } },
   });
 
   return (

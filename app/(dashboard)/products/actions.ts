@@ -18,6 +18,26 @@ const productSchema = z.object({
   isActive: z.boolean().optional(),
 });
 
+function mapProduct(p: any) {
+  return {
+    id: p.id,
+    vendorId: p.vendor_id,
+    categoryId: p.category_id,
+    name: p.name,
+    description: p.description,
+    sku: p.sku,
+    price: Number(p.price),
+    costPrice: p.cost_price ? Number(p.cost_price) : null,
+    stockQuantity: p.stock_quantity,
+    lowStockAlert: p.low_stock_alert,
+    imageUrl: p.image_url,
+    isActive: p.is_active,
+    deletedAt: p.deleted_at,
+    createdAt: p.created_at,
+    updatedAt: p.updated_at,
+  };
+}
+
 export async function createProduct(data: z.infer<typeof productSchema>) {
   const vendor = await getVendor();
   const parsed = productSchema.parse(data);
@@ -45,7 +65,7 @@ export async function createProduct(data: z.infer<typeof productSchema>) {
 
   revalidatePath("/products");
   revalidatePath("/pos");
-  return product;
+  return mapProduct(product);
 }
 
 export async function updateProduct(id: string, data: Partial<z.infer<typeof productSchema>>) {
@@ -79,7 +99,7 @@ export async function updateProduct(id: string, data: Partial<z.infer<typeof pro
 
   revalidatePath("/products");
   revalidatePath("/pos");
-  return product;
+  return mapProduct(product);
 }
 
 export async function deleteProduct(id: string) {

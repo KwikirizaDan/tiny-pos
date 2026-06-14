@@ -17,11 +17,17 @@ const changeTypeVariant: Record<string, "success" | "destructive" | "secondary" 
   restock: "success", sale: "secondary", refund: "warning", adjustment: "secondary", damage: "destructive",
 };
 
+const PAGE_SIZE = 10;
+
 export function InventoryClient({ logs: init, products }: { logs: InventoryLog[]; products: Product[] }) {
   const [logs, setLogs] = useState(init);
+  const [page, setPage] = useState(0);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({ productId: "", changeType: "restock", quantityChange: "", notes: "" });
+
+  const pageCount = Math.ceil(logs.length / PAGE_SIZE);
+  const paginatedLogs = logs.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
   const getProductName = (id: string | null) => products.find((p) => p.id === id)?.name ?? "—";
 
@@ -72,7 +78,7 @@ export function InventoryClient({ logs: init, products }: { logs: InventoryLog[]
               </TableRow>
             </TableHeader>
             <TableBody>
-              {logs.map((log) => (
+              {paginatedLogs.map((log) => (
                 <TableRow key={log.id}>
                   <TableCell className="text-xs text-muted-foreground">{formatDate(log.createdAt!)}</TableCell>
                   <TableCell className="text-sm font-medium">{getProductName(log.productId)}</TableCell>
@@ -85,6 +91,17 @@ export function InventoryClient({ logs: init, products }: { logs: InventoryLog[]
               ))}
             </TableBody>
           </Table>
+        </div>
+      )}
+
+      {logs.length > PAGE_SIZE && (
+        <div className="flex items-center justify-between text-sm text-muted-foreground">
+          <span>{logs.length} log entries</span>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0}>Previous</Button>
+            <span className="text-xs">Page {page + 1} of {pageCount}</span>
+            <Button variant="outline" size="sm" onClick={() => setPage(p => Math.min(pageCount - 1, p + 1))} disabled={page >= pageCount - 1}>Next</Button>
+          </div>
         </div>
       )}
 
