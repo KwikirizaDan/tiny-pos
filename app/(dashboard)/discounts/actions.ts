@@ -41,6 +41,8 @@ export async function createDiscount(data: z.infer<typeof discountSchema>) {
   if (error) throw new Error(error.message);
 
   revalidatePath("/discounts");
+  revalidatePath("/pos");
+  revalidatePath("/dashboard");
   logAuditEvent({ action: "CREATE", tableName: "discounts", recordId: discount.id, newData: JSON.stringify(discount) });
   return discount;
 }
@@ -72,6 +74,8 @@ export async function updateDiscount(id: string, data: Partial<z.infer<typeof di
   if (error) throw new Error(error.message);
 
   revalidatePath("/discounts");
+  revalidatePath("/pos");
+  revalidatePath("/dashboard");
   logAuditEvent({ action: "UPDATE", tableName: "discounts", recordId: id, oldData: JSON.stringify(oldDiscount), newData: JSON.stringify(discount) });
   return discount;
 }
@@ -91,6 +95,8 @@ export async function deleteDiscount(id: string) {
   if (error) throw new Error(error.message);
 
   revalidatePath("/discounts");
+  revalidatePath("/pos");
+  revalidatePath("/dashboard");
   logAuditEvent({ action: "DELETE", tableName: "discounts", recordId: id, oldData: JSON.stringify(oldDiscount) });
   return { success: true };
 }

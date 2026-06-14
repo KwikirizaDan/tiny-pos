@@ -60,6 +60,7 @@ export async function createInventoryLog(data: z.infer<typeof inventoryLogSchema
 
   revalidatePath("/inventory");
   revalidatePath("/products");
+  revalidatePath("/dashboard");
 
   logAuditEvent({ action: "ADJUSTMENT", tableName: "inventory_logs", recordId: log.id, newData: JSON.stringify(log) });
   return log;

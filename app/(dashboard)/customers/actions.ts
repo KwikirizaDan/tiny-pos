@@ -35,6 +35,8 @@ export async function createCustomer(data: z.infer<typeof customerSchema>) {
   if (error) throw new Error(error.message);
 
   revalidatePath("/customers");
+  revalidatePath("/orders");
+  revalidatePath("/dashboard");
   logAuditEvent({ action: "CREATE", tableName: "customers", recordId: customer.id, newData: JSON.stringify(customer) });
   return customer;
 }
@@ -66,6 +68,8 @@ export async function updateCustomer(id: string, data: Partial<z.infer<typeof cu
   if (error) throw new Error(error.message);
 
   revalidatePath("/customers");
+  revalidatePath("/orders");
+  revalidatePath("/dashboard");
   logAuditEvent({ action: "UPDATE", tableName: "customers", recordId: id, oldData: JSON.stringify(oldCustomer), newData: JSON.stringify(customer) });
   return customer;
 }
@@ -85,6 +89,8 @@ export async function deleteCustomer(id: string) {
   if (error) throw new Error(error.message);
 
   revalidatePath("/customers");
+  revalidatePath("/orders");
+  revalidatePath("/dashboard");
   logAuditEvent({ action: "DELETE", tableName: "customers", recordId: id, oldData: JSON.stringify(oldCustomer) });
   return { success: true };
 }

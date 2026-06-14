@@ -66,6 +66,7 @@ export async function createProduct(data: z.infer<typeof productSchema>) {
 
   revalidatePath("/products");
   revalidatePath("/pos");
+  revalidatePath("/dashboard");
   logAuditEvent({ action: "CREATE", tableName: "products", recordId: product.id, newData: JSON.stringify(product) });
   return mapProduct(product);
 }
@@ -103,6 +104,7 @@ export async function updateProduct(id: string, data: Partial<z.infer<typeof pro
 
   revalidatePath("/products");
   revalidatePath("/pos");
+  revalidatePath("/dashboard");
   logAuditEvent({ action: "UPDATE", tableName: "products", recordId: id, oldData: JSON.stringify(oldProduct), newData: JSON.stringify(product) });
   return mapProduct(product);
 }
@@ -123,6 +125,7 @@ export async function deleteProduct(id: string) {
 
   revalidatePath("/products");
   revalidatePath("/pos");
+  revalidatePath("/dashboard");
   logAuditEvent({ action: "DELETE", tableName: "products", recordId: id, oldData: JSON.stringify(oldProduct) });
   return { success: true };
 }

@@ -44,6 +44,7 @@ export async function createStaff(data: z.infer<typeof staffSchema>) {
   if (error) throw new Error(error.message);
 
   revalidatePath("/staff");
+  revalidatePath("/dashboard");
   logAuditEvent({ action: "CREATE", tableName: "users", recordId: staff.id, newData: JSON.stringify(staff) });
   return staff;
 }
@@ -74,6 +75,7 @@ export async function updateStaff(id: string, data: Partial<z.infer<typeof staff
   if (error) throw new Error(error.message);
 
   revalidatePath("/staff");
+  revalidatePath("/dashboard");
   logAuditEvent({ action: "UPDATE", tableName: "users", recordId: id, oldData: JSON.stringify(oldStaff), newData: JSON.stringify(staff) });
   return staff;
 }
@@ -93,6 +95,7 @@ export async function deleteStaff(id: string) {
   if (error) throw new Error(error.message);
 
   revalidatePath("/staff");
+  revalidatePath("/dashboard");
   logAuditEvent({ action: "DELETE", tableName: "users", recordId: id, oldData: JSON.stringify(oldStaff) });
   return { success: true };
 }

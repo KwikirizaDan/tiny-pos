@@ -29,6 +29,8 @@ export async function createCategory(data: z.infer<typeof categorySchema>) {
   if (error) throw new Error(error.message);
 
   revalidatePath("/categories");
+  revalidatePath("/products");
+  revalidatePath("/dashboard");
   logAuditEvent({ action: "CREATE", tableName: "categories", recordId: category.id, newData: JSON.stringify(category) });
   return category;
 }
@@ -53,6 +55,8 @@ export async function updateCategory(id: string, data: Partial<z.infer<typeof ca
   if (error) throw new Error(error.message);
 
   revalidatePath("/categories");
+  revalidatePath("/products");
+  revalidatePath("/dashboard");
   logAuditEvent({ action: "UPDATE", tableName: "categories", recordId: id, oldData: JSON.stringify(oldCategory), newData: JSON.stringify(category) });
   return category;
 }
@@ -72,6 +76,8 @@ export async function deleteCategory(id: string) {
   if (error) throw new Error(error.message);
 
   revalidatePath("/categories");
+  revalidatePath("/products");
+  revalidatePath("/dashboard");
   logAuditEvent({ action: "DELETE", tableName: "categories", recordId: id, oldData: JSON.stringify(oldCategory) });
   return { success: true };
 }
