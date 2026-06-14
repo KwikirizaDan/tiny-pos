@@ -162,11 +162,15 @@ export function ProductDialog({ open, onOpenChange, product, categories, vendorI
                 placeholder="5" />
             </div>
 
-            <div className="space-y-1.5">
+            <div className="col-span-2 space-y-1.5">
               <Label>Category</Label>
               <Select value={form.categoryId} onValueChange={(v) => setForm({ ...form, categoryId: v ?? form.categoryId })}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select category" />
+                  <SelectValue placeholder="Select category">
+                    {form.categoryId !== "none"
+                      ? categories.find((c) => c.id === form.categoryId)?.name ?? "Select category"
+                      : "No category"}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">No category</SelectItem>
@@ -177,7 +181,7 @@ export function ProductDialog({ open, onOpenChange, product, categories, vendorI
               </Select>
             </div>
 
-            <div className="space-y-1.5">
+            <div className="col-span-2 space-y-1.5">
               <Label htmlFor="sku">SKU</Label>
               <Input id="sku" value={form.sku} onChange={(e) => setForm({ ...form, sku: e.target.value })}
                 placeholder="SKU-001" />
