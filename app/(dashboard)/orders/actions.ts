@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getVendor } from "@/lib/vendor";
+import { logAuditEvent } from "@/lib/audit";
 import { z } from "zod";
 
 const orderSchema = z.object({
@@ -129,6 +130,7 @@ export async function createOrder(data: z.infer<typeof orderSchema>) {
     revalidatePath("/inventory");
     revalidatePath("/dashboard");
 
+    logAuditEvent({ action: "CREATE", tableName: "sales", recordId: sale.id, newData: JSON.stringify(sale) });
     return sale;
   } catch (error: any) {
     console.error("Order error:", error);

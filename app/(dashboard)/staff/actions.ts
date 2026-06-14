@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getVendor } from "@/lib/vendor";
+import { logAuditEvent } from "@/lib/audit";
 import { z } from "zod";
 
 const staffSchema = z.object({
@@ -43,12 +44,15 @@ export async function createStaff(data: z.infer<typeof staffSchema>) {
   if (error) throw new Error(error.message);
 
   revalidatePath("/staff");
+  logAuditEvent({ action: "CREATE", tableName: "users", recordId: staff.id, newData: JSON.stringify(staff) });
   return staff;
 }
 
 export async function updateStaff(id: string, data: Partial<z.infer<typeof staffSchema>>) {
   const vendor = await getVendor();
   const supabase = await createClient();
+
+  const { data: oldStaff } = await supabase.from("users").select("*").eq("id", id).single();
 
   const updateData: any = {
     updated_at: new Date().toISOString(),
@@ -70,12 +74,15 @@ export async function updateStaff(id: string, data: Partial<z.infer<typeof staff
   if (error) throw new Error(error.message);
 
   revalidatePath("/staff");
+  logAuditEvent({ action: "UPDATE", tableName: "users", recordId: id, oldData: JSON.stringify(oldStaff), newData: JSON.stringify(staff) });
   return staff;
 }
 
 export async function deleteStaff(id: string) {
   const vendor = await getVendor();
   const supabase = await createClient();
+
+  const { data: oldStaff } = await supabase.from("users").select("*").eq("id", id).single();
 
   const { error } = await supabase
     .from("users")
@@ -86,5 +93,6 @@ export async function deleteStaff(id: string) {
   if (error) throw new Error(error.message);
 
   revalidatePath("/staff");
+  logAuditEvent({ action: "DELETE", tableName: "users", recordId: id, oldData: JSON.stringify(oldStaff) });
   return { success: true };
 }

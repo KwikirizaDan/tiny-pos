@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getVendor } from "@/lib/vendor";
+import { logAuditEvent } from "@/lib/audit";
 import { z } from "zod";
 
 const productSchema = z.object({
@@ -65,12 +66,15 @@ export async function createProduct(data: z.infer<typeof productSchema>) {
 
   revalidatePath("/products");
   revalidatePath("/pos");
+  logAuditEvent({ action: "CREATE", tableName: "products", recordId: product.id, newData: JSON.stringify(product) });
   return mapProduct(product);
 }
 
 export async function updateProduct(id: string, data: Partial<z.infer<typeof productSchema>>) {
   const vendor = await getVendor();
   const supabase = await createClient();
+
+  const { data: oldProduct } = await supabase.from("products").select("*").eq("id", id).single();
 
   const updateData: any = {
     updated_at: new Date().toISOString(),
@@ -99,12 +103,15 @@ export async function updateProduct(id: string, data: Partial<z.infer<typeof pro
 
   revalidatePath("/products");
   revalidatePath("/pos");
+  logAuditEvent({ action: "UPDATE", tableName: "products", recordId: id, oldData: JSON.stringify(oldProduct), newData: JSON.stringify(product) });
   return mapProduct(product);
 }
 
 export async function deleteProduct(id: string) {
   const vendor = await getVendor();
   const supabase = await createClient();
+
+  const { data: oldProduct } = await supabase.from("products").select("*").eq("id", id).single();
 
   const { error } = await supabase
     .from("products")
@@ -116,5 +123,6 @@ export async function deleteProduct(id: string) {
 
   revalidatePath("/products");
   revalidatePath("/pos");
+  logAuditEvent({ action: "DELETE", tableName: "products", recordId: id, oldData: JSON.stringify(oldProduct) });
   return { success: true };
 }

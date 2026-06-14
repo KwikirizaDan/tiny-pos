@@ -26,6 +26,11 @@ export function LoginForm({ className, ...props }: React.ComponentProps<"div">) 
       toast.error(error.message);
       setPending(false);
     } else {
+      fetch("/api/audit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "LOGIN", tableName: "users" }),
+      });
       router.push("/dashboard");
       router.refresh();
     }

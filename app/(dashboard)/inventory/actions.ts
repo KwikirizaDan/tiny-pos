@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getVendor } from "@/lib/vendor";
+import { logAuditEvent } from "@/lib/audit";
 import { z } from "zod";
 
 const inventoryLogSchema = z.object({
@@ -60,5 +61,6 @@ export async function createInventoryLog(data: z.infer<typeof inventoryLogSchema
   revalidatePath("/inventory");
   revalidatePath("/products");
 
+  logAuditEvent({ action: "ADJUSTMENT", tableName: "inventory_logs", recordId: log.id, newData: JSON.stringify(log) });
   return log;
 }

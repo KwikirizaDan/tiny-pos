@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getVendor } from "@/lib/vendor";
+import { logAuditEvent } from "@/lib/audit";
 import { z } from "zod";
 
 const discountSchema = z.object({
@@ -40,12 +41,15 @@ export async function createDiscount(data: z.infer<typeof discountSchema>) {
   if (error) throw new Error(error.message);
 
   revalidatePath("/discounts");
+  logAuditEvent({ action: "CREATE", tableName: "discounts", recordId: discount.id, newData: JSON.stringify(discount) });
   return discount;
 }
 
 export async function updateDiscount(id: string, data: Partial<z.infer<typeof discountSchema>>) {
   const vendor = await getVendor();
   const supabase = await createClient();
+
+  const { data: oldDiscount } = await supabase.from("discounts").select("*").eq("id", id).single();
 
   const updateData: any = {};
   if (data.code !== undefined) updateData.code = data.code;
@@ -68,12 +72,15 @@ export async function updateDiscount(id: string, data: Partial<z.infer<typeof di
   if (error) throw new Error(error.message);
 
   revalidatePath("/discounts");
+  logAuditEvent({ action: "UPDATE", tableName: "discounts", recordId: id, oldData: JSON.stringify(oldDiscount), newData: JSON.stringify(discount) });
   return discount;
 }
 
 export async function deleteDiscount(id: string) {
   const vendor = await getVendor();
   const supabase = await createClient();
+
+  const { data: oldDiscount } = await supabase.from("discounts").select("*").eq("id", id).single();
 
   const { error } = await supabase
     .from("discounts")
@@ -84,5 +91,6 @@ export async function deleteDiscount(id: string) {
   if (error) throw new Error(error.message);
 
   revalidatePath("/discounts");
+  logAuditEvent({ action: "DELETE", tableName: "discounts", recordId: id, oldData: JSON.stringify(oldDiscount) });
   return { success: true };
 }

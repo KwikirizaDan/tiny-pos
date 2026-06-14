@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getVendor } from "@/lib/vendor";
+import { logAuditEvent } from "@/lib/audit";
 import { z } from "zod";
 
 const refundSchema = z.object({
@@ -57,6 +58,7 @@ export async function createRefund(data: z.infer<typeof refundSchema>) {
     revalidatePath("/orders");
     revalidatePath("/dashboard");
 
+    logAuditEvent({ action: "REFUND", tableName: "refunds", recordId: refund.id, newData: JSON.stringify(refund) });
     return refund;
   } catch (error: any) {
     console.error("Refund error:", error);

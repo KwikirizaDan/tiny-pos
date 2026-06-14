@@ -27,14 +27,20 @@ export function UserMenu() {
   }, [supabase])
 
   const handleSignOut = async () => {
-    const { error } = await supabase.auth.signOut()
-    if (error) {
-      toast.error(error.message)
-    } else {
-      toast.success("Signed out successfully")
-      router.push("/sign-in")
-      router.refresh()
-    }
+    fetch("/api/audit", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "LOGOUT", tableName: "users" }),
+    }).finally(async () => {
+      const { error } = await supabase.auth.signOut()
+      if (error) {
+        toast.error(error.message)
+      } else {
+        toast.success("Signed out successfully")
+        router.push("/sign-in")
+        router.refresh()
+      }
+    })
   }
 
   return (

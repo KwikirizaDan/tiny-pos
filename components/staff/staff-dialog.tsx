@@ -70,7 +70,7 @@ export function StaffDialog({ open, onOpenChange, member, onSave }: Props) {
           <div className="space-y-1.5">
             <Label>Role *</Label>
             <Select value={form.role} onValueChange={(v) => setForm({ ...form, role: v as UserRole })}>
-              <SelectTrigger>
+              <SelectTrigger className="w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>

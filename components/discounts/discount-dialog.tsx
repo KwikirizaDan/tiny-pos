@@ -70,7 +70,7 @@ export function DiscountDialog({ open, onOpenChange, discount, onSave }: Props) 
             <div className="space-y-1.5">
               <Label>Type *</Label>
               <Select value={form.discountType} onValueChange={(v) => setForm({ ...form, discountType: v ?? form.discountType })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="percentage">Percentage (%)</SelectItem>
                   <SelectItem value="flat">Flat (UGX)</SelectItem>

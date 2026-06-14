@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getVendor } from "@/lib/vendor";
+import { logAuditEvent } from "@/lib/audit";
 import { z } from "zod";
 
 const customerSchema = z.object({
@@ -34,12 +35,15 @@ export async function createCustomer(data: z.infer<typeof customerSchema>) {
   if (error) throw new Error(error.message);
 
   revalidatePath("/customers");
+  logAuditEvent({ action: "CREATE", tableName: "customers", recordId: customer.id, newData: JSON.stringify(customer) });
   return customer;
 }
 
 export async function updateCustomer(id: string, data: Partial<z.infer<typeof customerSchema>>) {
   const vendor = await getVendor();
   const supabase = await createClient();
+
+  const { data: oldCustomer } = await supabase.from("customers").select("*").eq("id", id).single();
 
   const updateData: any = {
     updated_at: new Date().toISOString(),
@@ -62,12 +66,15 @@ export async function updateCustomer(id: string, data: Partial<z.infer<typeof cu
   if (error) throw new Error(error.message);
 
   revalidatePath("/customers");
+  logAuditEvent({ action: "UPDATE", tableName: "customers", recordId: id, oldData: JSON.stringify(oldCustomer), newData: JSON.stringify(customer) });
   return customer;
 }
 
 export async function deleteCustomer(id: string) {
   const vendor = await getVendor();
   const supabase = await createClient();
+
+  const { data: oldCustomer } = await supabase.from("customers").select("*").eq("id", id).single();
 
   const { error } = await supabase
     .from("customers")
@@ -78,5 +85,6 @@ export async function deleteCustomer(id: string) {
   if (error) throw new Error(error.message);
 
   revalidatePath("/customers");
+  logAuditEvent({ action: "DELETE", tableName: "customers", recordId: id, oldData: JSON.stringify(oldCustomer) });
   return { success: true };
 }
