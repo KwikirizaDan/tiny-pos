@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Plus, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,7 @@ const changeTypeVariant: Record<string, "success" | "destructive" | "secondary" 
 const PAGE_SIZE = 10;
 
 export function InventoryClient({ logs: init, products }: { logs: InventoryLog[]; products: Product[] }) {
+  const router = useRouter();
   const [logs, setLogs] = useState(init);
   const [page, setPage] = useState(0);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -41,6 +43,7 @@ export function InventoryClient({ logs: init, products }: { logs: InventoryLog[]
         changeType: form.changeType as any,
       });
       setLogs((p) => [saved as InventoryLog, ...p]);
+      router.refresh();
       toast.success("Stock adjusted");
       setDialogOpen(false);
       setForm({ productId: "", changeType: "restock", quantityChange: "", notes: "" });
